@@ -1,0 +1,146 @@
+.PHONY: all run clean $(ALL)
+
+RESULT = .result
+$(shell > $(RESULT))
+
+ALL = $(basename $(notdir $(shell find src -name "*.c")))
+
+COLOR_RED   = \033[1;31m
+COLOR_GREEN = \033[1;32m
+COLOR_BLUE  = \033[1;34m
+COLOR_NONE  = \033[0m
+
+WORK_DIR = $(shell pwd)
+DST_DIR = $(WORK_DIR)/build
+SRC_DIR = $(WORK_DIR)/src
+INC_DIR = $(WORK_DIR)/include
+IMAGE = $(DST_DIR)/$(NAME)
+
+CROSS_COMPILE = riscv64-linux-gnu
+
+AS = $(CROSS_COMPILE)-as
+CC = $(CROSS_COMPILE)-gcc
+CXX = $(CROSS_COMPILE)-g++
+LD = $(CROSS_COMPILE)-ld
+OBJDUMP = $(CROSS_COMPILE)-objdump
+OBJCOPY = $(CROSS_COMPILE)-objcopy
+READELF = $(CROSS_COMPILE)-readelf
+OBJCOPY = $(CROSS_COMPILE)-objcopy
+
+CFLAGS = -I$(INC_DIR)
+
+CFLAGS += -Wall -Werror -O2 -std=gnu11
+
+SFLAGS = -MMD
+## forbidden the position independent code
+## If the program need to link to the shared library code, -fpic must be added
+SFLAGS += -fno-pic
+
+## RISC-V CG set
+SFLAGS += -march=rv64g
+
+## medium any(medany), a kind of code model, it put the code and data into different sections, but using relative addressing.
+SFLAGS += -mcmodel=medany
+
+## strict alignment enforcement
+SFLAGS += -mstrict-align
+SFLAGS += -c
+
+CFLAGS += $(SFLAGS)
+
+## record the function frame in program stack
+CFLAGS += -fno-asynchronous-unwind-tables 
+
+CFLAGS += -fno-builtin
+
+## gcc will insert a random, called 'cookie', into the stack to protect the stack. 
+CFLAGS += -fno-stack-protector
+
+## put the global var or static var into data section
+CFLAGS += -fdata-sections
+
+## put the function into function section
+CFLAGS += -ffunction-sections
+
+## ignore the warning assiciated with the main function, i.e. if the
+## program does not have the main function.
+CFLAGS += -Wno-main
+
+## forbidden the safety characteristics
+CFLAGS += -U_FORTIFY_SOURCE
+
+CFLAGS += -static
+
+all: $(addprefix Makefile., $(ALL))
+	@echo "" $(ALL)
+
+$(ALL): %: Makefile.%
+
+Makefile.%: src/%.c
+	@/bin/echo -e "include $(WORK_DIR)/Makefile" > $@
+	@if make -s -f $@ run NAME=$*; then\
+		printf "[%14s] $(COLOR_GREEN) PASS!$(COLOR_NONE) \n" $* >> $(RESULT) ; \
+	else \
+		printf "[%14s] $(COLOR_RED) FALL!$(COLOR_NONE) \n" $* >> $(RESULT) ; \
+	fi
+	-@rm -f Makefile.$*
+
+runall: all
+	@cat $(RESULT)
+	@rm $(RESULT)
+
+$(DST_DIR)/%.o: $(INC_DIR)/%.c
+	@mkdir -p $(dir $@) && echo +CC $<
+	@$(CC) $(CFLAGS) -o $@ $(realpath $<)
+
+$(DST_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@) && echo +CC $<
+	@$(CC) $(CFLAGS) -o $@ $(realpath $<)
+
+$(DST_DIR)/start.o: $(INC_DIR)/start.S
+	@mkdir -p $(dir $@) && echo +AS $<
+	@$(CC) -O0 $(SFLAGS) -c -o $@ $(realpath $<)
+
+#$(DST_DIR)/%.o: $(DST_DIR)/%.c
+#	@mkdir -p $(dir $@) && echo +CC $<
+#	@$(AS) -o $@ $(realpath $<)
+
+
+$(IMAGE).elf: $(IMAGE).o $(DST_DIR)/start.o $(DST_DIR)/trm.o $(DST_DIR)/string.o $(DST_DIR)/stdio.o
+	@echo + LD "->" $@
+	@$(LD) -o $@ -T script/linker.ld --entry=_start --start-group $(IMAGE).o $(DST_DIR)/start.o $(DST_DIR)/trm.o $(DST_DIR)/string.o $(DST_DIR)/stdio.o --end-group
+
+$(IMAGE).bin: $(IMAGE).elf
+	$(OBJCOPY) -S -O binary $(realpath $<) $@
+	xxd -e -b $@ | sed 's/.*: //' | sed 's/  .*//' > $(IMAGE).txt
+
+
+CPU_DIR = /home/wuchenze/single_cycle
+RUN_FILE = $(CPU_DIR)/build/top
+
+
+$(RUN_FILE):
+	make -C $(CPU_DIR) -f $(CPU_DIR)/Makefile
+
+
+run: $(IMAGE).bin $(RUN_FILE)
+	$(RUN_FILE) --diff=$(NEMU_HOME)/build/riscv64-nemu-interpreter-so --bin=$< "+img_txt=$(IMAGE).txt"
+
+
+#$(OBJCOPY) -S -O binary $(SRC).elf $(SRC).bin
+
+wave:
+	gtkwave wave.vcd -a cpu.gtkw
+
+dumpbin:
+	$(OBJDUMP) -D -b binary -m riscv:rv64 $(IMAGE).bin
+
+dumpelf:
+	$(OBJDUMP) -d $(IMAGE).elf
+
+readelf:
+	$(READELF) -a $(IMAGE).elf
+
+clean:
+	rm -rf $(DST_DIR) Makefile.*
+	rm -rf $(CPU_DIR)/build
