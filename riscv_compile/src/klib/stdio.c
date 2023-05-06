@@ -2,8 +2,6 @@
 #include <klib.h>
 #include <klib-macros.h>
 
-
-/*
 static char number_buf[128];
 
 void change_format_x(uint64_t x_number) {
@@ -17,7 +15,8 @@ void change_format_x(uint64_t x_number) {
   else if ( x_number == 0xffffffffffffffff ) {
     number_buf[0] = '0' ;
     for( i=1; i<17; i++ )  number_buf[i] = 'f';
-    number_buf[i] = '\0' ;
+    number_buf[i] = '\0';
+  
   }
   else {
     uint64_t system = 1ull;
@@ -41,8 +40,8 @@ void change_format_x(uint64_t x_number) {
     }
     number_buf[i] = '\0';
   }
-
 }
+
 void change_format_d(int64_t input_number) {
   int64_t d_number = input_number;
   int i;
@@ -51,13 +50,16 @@ void change_format_d(int64_t input_number) {
     number_buf[1] = '0' ;
     number_buf[2] = '\0';
     return ;
+  
   }
   if( d_number < 0 )  {
     d_number = - d_number ;
     number_buf[0] = '-' ;
+  
   }
   else {
-    number_buf[0] = ' ' ;
+    number_buf[0] = ' ';
+  
   }
   int64_t system = 1;
   int64_t bits   = 1;
@@ -76,6 +78,68 @@ void change_format_d(int64_t input_number) {
 }
 
 
+int printf(const char *fmt, ...)  {
+  va_list valist;
+  va_start(valist, fmt);
+
+  char *char_buf ;
+  while( *fmt ) {
+    if( ( *fmt == '%' && *(fmt+1) == 'x' )  ||
+        ( *fmt == '%' && *(fmt+1) == 'p' ) ) {
+      uint64_t x_number = va_arg(valist, uint64_t);
+      change_format_x(x_number);
+      char_buf = number_buf + 1 ;
+      while( *char_buf ) {
+        putch( *char_buf );
+        char_buf++;
+      }
+      fmt++;
+    }
+
+    else if( (*fmt == '%' && *(fmt+1) == 'd') || 
+        (*fmt == '%' && *(fmt+1) == '0'  && *(fmt+2) == '2' && *(fmt+3) == 'd' ) ) {
+      int64_t d_number = va_arg(valist, int64_t);
+      change_format_d(d_number);
+      char_buf = number_buf ;
+      while( *char_buf ) {
+        putch( *char_buf );
+        char_buf++;
+      }
+      if (*fmt == '%' && *(fmt+1) == '0'  && *(fmt+2) == '2' && *(fmt+3) == 'd' ) {
+          fmt = fmt  + 2 ;
+      }
+      fmt++;
+    }
+
+    else if( *fmt == '%' && *(fmt+1) == 's' ) {
+      char* string = va_arg(valist, char*);
+        while( *string ){
+          putch( *string );
+          string++;
+        }
+      fmt++;
+    }
+
+    else if( *fmt == '%' && *(fmt+1) == 'c' ) {
+      char character = va_arg(valist, int);
+      putch(character);
+      fmt++;
+    }
+
+    else {
+      putch(*fmt);
+    }
+
+      fmt++;
+
+  }
+  va_end(valist);
+  return 0;
+}
+
+
+
+/*
 int vsprintf(char *out, const char *fmt, va_list ap) {
  panic("Not implemented");
  return 0;

@@ -17,7 +17,7 @@ CSRC_DIR = $(WORK_DIR)/csrc
 CSRCS = $(shell find $(CSRC_DIR) -name "*.c" -or -name "*.cc" -or -name "*.cpp")
 
 #VC_FLAGS = -O3 -x-initial fast --x-assign fast 
-VC_FLAGS += -cc --MMD -Wall
+VC_FLAGS += -cc --MMD -Wall -I$(WORK_DIR)/include
 VC_FLAGS += --exe --build --assert --timing 
 ifeq ($(WAVE),en)
   VC_FLAGS += --trace --coverage

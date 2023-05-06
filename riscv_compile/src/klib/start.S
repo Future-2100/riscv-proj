@@ -3,6 +3,6 @@
 .type _start, @function
 
 _start:
-  mv s0, zero
+  la s0, _stack_top
   la sp, _stack_pointer
   jal _trm_init

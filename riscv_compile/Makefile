@@ -25,7 +25,7 @@ RESULT = .result
 
 ALL = $(basename $(notdir $(shell find $(TEST_DIR) -name "*.c")))
 
-default: $(IMAGE).elf
+default: $(IMAGE).bin
 
 CROSS_COMPILE = riscv64-linux-gnu
 AS = $(CROSS_COMPILE)-as
@@ -40,9 +40,9 @@ OBJCOPY = $(CROSS_COMPILE)-objcopy
 SFLAGS = -fno-pic -march=rv64g -mcmodel=medany -mstrict-align
 
 SFLAGS += -I$(INC_DIR)
-CFLAGS += -Wall -Werror -std=gnu11
+CFLAGS += -Wall -Werror -std=gnu11 -O0
 CFLAGS += $(SFLAGS)
-CFLAGS += -fno-asynchronous-unwind-tables -fno-builtin -fno-stack-protector -fdata-sections -ffunction-sections
+CFLAGS += -fno-asynchronous-unwind-tables -fno-builtin -fno-stack-protector -fdata-sections -ffunction-sections -fomit-frame-pointer
 CFLAGS += -Wno-main -U_FORTIFY_SOURCE -static
 
 Makefile.%: $(TEST_DIR)/%.c

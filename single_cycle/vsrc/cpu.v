@@ -1,4 +1,4 @@
-`default_nettype none
+`include "default.v"
 
 module cpu(
   input  wire          clk         ,

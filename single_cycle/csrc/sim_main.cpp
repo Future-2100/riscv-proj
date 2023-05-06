@@ -18,12 +18,14 @@
 
 #include <common.h>
 
+/*
 const char *regname[] = {
   "$0", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
   "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
   "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
   "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
 };
+*/
 
 static char *log_file = NULL;
 static char *diff_so_file = NULL;
@@ -106,6 +108,8 @@ int main(int argc, char** argv, char** env) {
     }
 
 
+#ifdef DIFFTEST
+
     FILE *fp = fopen(img_bin, "rb");
     assert(fp);
 
@@ -120,13 +124,16 @@ int main(int argc, char** argv, char** env) {
 
     init_difftest(diff_so_file, img_size, difftest_port, pmem);
 
-
     bool edge = false ;
     bool resetting = true ;
+
+#endif
+
     while (!contextp->gotFinish()) {
         
         top->eval();
 
+#ifdef DIFFTEST
         if( top->diff_rstn == 1 ) {
           resetting = false ;
         }
@@ -140,25 +147,23 @@ int main(int argc, char** argv, char** env) {
         else if( top->diff_clk == 0){
           if( edge == true && resetting == false ) { 
             if( difftest_step(*cpu_pc) == false) {
-              /*
-              for(int i=0; i<32; i++){
-                printf("x%d(%s) = 0x%lx\n", i, regname[i], cpu_gpr[i]);
-              }
-            */
               printf(COLOR_GREEN);
               printf("time : %ld\n",contextp->time());
               printf("npc pc = 0x%lx\n", *cpu_pc);
               printf(COLOR_NONE);
+
+              //  if difftest check has not passed, let cpu continue three clock cycle and then finish the simulation .
+              for(int i=0; i<30; i++){
+                contextp->timeInc(1);
+              }
+              top->final();
+              delete top;
+              return 1;
             }
           }
           edge = false;
         }
-        
-        /*
-        if(contextp->time() > 2000) {
-          return 1;
-        }
-        */
+#endif
         
         contextp->timeInc(1);
     }

@@ -6,6 +6,8 @@
 #define COLOR_BLUE   "\033[1;34m"
 #define COLOR_NONE   "\033[0m"
 
+#include <config.h>
+
 
 typedef struct{
   uint64_t gpr[32];

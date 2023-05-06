@@ -1,4 +1,5 @@
-`default_nettype none 
+`include "default.v"
+`include "config.v"
 
 module top(
   output    wire   diff_clk   ,
@@ -22,14 +23,15 @@ module top(
   assign diff_clk  = clk ;
 
 
+
   initial begin: watching_dog
-    #10000000 ;
+    #(70000*`PERIOD) ;
     $display("\033[1;31m------------------------time out----------------------------\033[0m"); 
-    $finish(2);
+    $finish;
   end
 
 
-  always #10 clk <= ~clk ;
+  always #(`PERIOD/2) clk <= ~clk ;
 
 
   initial begin
@@ -53,6 +55,7 @@ cpu cpu_inst (
   .ebreak     ( ebreak     )   
 );
 
+wire  [63:0]  mmy_rdata;
 memory memory_inst(
    .clk    ( clk       )  ,
    .pc     ( pc        )  ,
@@ -62,17 +65,46 @@ memory memory_inst(
    .strb   ( acs_bytes )  ,
    .addr   ( acs_addr  )  ,
    .wdata  ( acs_wdata )  ,
-   .rdata  ( acs_rdata )  
+   .rdata  ( mmy_rdata )  
 );
+
+`ifdef DEVICE_UART
+wire  uart_wen = acs_en & acs_wr ;
+uart  uart_inst(
+  .clk   ( clk       ) ,
+  .rstn  ( rstn      ) ,
+  .wen   ( uart_wen  ) ,
+  .wdata ( acs_wdata ) ,
+  .waddr ( acs_addr  ) 
+);
+`endif
+
+
+`ifdef DEVICE_TIMER
+wire  timer_ren = acs_en & !acs_wr ;
+wire  [63:0]  timer_rdata;
+timer timer_inst(
+  .clk    ( clk         ) ,
+  .rstn   ( rstn        ) ,
+  .ren    ( timer_ren   ) ,
+  .raddr  ( acs_addr    ) ,
+  .rdata  ( timer_rdata )  
+);
+assign acs_rdata = mmy_rdata | timer_rdata ;
+`else
+assign acs_rdata = mmy_rdata  ;
+`endif
+
+
 
 
   always@(posedge clk) begin
     if(ebreak) begin
       if( cpu_inst.regfile_inst.gpr[10] == 64'b0)
-        $display("\033[1;32mSUCCESS\033[0m");
+        $display("\033[1;32mSUCCESS at %0tns\033[0m", $time);
       else
         $display("\033[1;31mFAIL\033[1;31m");
-      $finish(0);
+      $finish;
     end
   end
 
@@ -99,6 +131,9 @@ memory memory_inst(
                          cpu_inst.decoder_inst.opcode_6_5__10 ,
                          memory_inst.pc,
                          memory_inst.addr
+                         `ifdef DEVICE_UART
+                         , uart_inst.wdata
+                         `endif
                        };
 
   string img_file ;

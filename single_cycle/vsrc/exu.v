@@ -1,3 +1,5 @@
+`include "default.v"
+
 module exu (
 
   input wire  [63:0]  pc        ,
@@ -92,7 +94,7 @@ module exu (
 
 //************** jump pc ****************//
   wire  [63:0]  jb_pc   =        pc + data_imm ;
-  wire  [63:0]  jalr_pc = (data_rs1 + data_imm ) & (~64'b1) ;
+  wire  [63:0]  jalr_pc = (data_rs1 + data_imm ) & (~64'b1) ; 
   assign  jump_pc =  jalr ? jalr_pc : jb_pc ;
 
   wire  [63:0]  pc_rslt = ( {64{jal | jalr}} & (pc+64'd4) ) ;
@@ -137,7 +139,7 @@ module exu (
   wire  [63:0]  sra_rslt = (srl_rslt & sra_mask) | ( {64{data_rs1[63]}} & ~sra_mask );
 
   wire  [63:0]  arith_rslt =  ( {64{add |addi }} & (data_rs1 +   arith_in2) ) |
-                              ( {64{sub       }} & (data_rs1 -   arith_in2) ) |
+                              ( {64{sub       }} & (data_rs1 +   arith_in2) ) |
                               ( {64{and_|andi }} & (data_rs1 &   arith_in2) ) |
                               ( {64{or_ |ori  }} & (data_rs1 |   arith_in2) ) |
                               ( {64{xor_|xori }} & (data_rs1 ^   arith_in2) ) |
@@ -219,3 +221,4 @@ module exu (
                      li_rslt ;
 
 endmodule
+

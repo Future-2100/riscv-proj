@@ -11,8 +11,23 @@ void halt(int code){
   while(1);
 }
 
+//#ifdef DEVICE
+
+#define UART_ADDR  0xa0000000
+void putch(char ch){
+  *(volatile uint8_t *)UART_ADDR = ch;
+}
+
+#define TIMER_ADDR 0xb0000000
+uint64_t read_timer(void){
+  return  *(volatile uint64_t *)(TIMER_ADDR) ;
+}
+
+//#endif
+
 void _trm_init() {
   int ret = main(mainargs);
   halt(ret);
 }
+
 

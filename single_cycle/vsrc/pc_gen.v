@@ -1,4 +1,4 @@
-`default_nettype none
+`include "default.v"
 
 module pc_gen(
 
