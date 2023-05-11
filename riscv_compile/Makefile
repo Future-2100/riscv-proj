@@ -68,6 +68,9 @@ runall: all
 $(DST_DIR)/%.o: $(TEST_DIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+$(DST_DIR)/%.o: $(TEST_DIR)/%.S
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 $(DST_DIR)/%.o: $(KLIB_DIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 

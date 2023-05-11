@@ -77,7 +77,7 @@ make run NAME=dummy
 make NAME=<test_name>
 ```
 即可编译``<test_name>``测试程序
-编译会生成``<test_name>.elf``文件、``<test_name>.bin``文件、``<test_name>.txt``文件以及``<test_name>_dumpelf.txt``文件,文件均在``riscv_compile/build``中
+编译会在``riscv_compile/build``文件夹下生成四个文件，分别是``<test_name>.elf``、``<test_name>.bin``、``<test_name>.txt``以及``<test_name>_dumpelf.txt``
 ``<test_name>.bin``文件是测试程序的二进制文件，包含了测试程序的指令和数据
 ``<test_name>.txt``文件是将``<test_name>.bin``文件以ASCII字符0和1的形式显示的结果,单周期CPU中的``top``模块会使用``$readmemb()``函数将``<test_name.txt>``文件数据载入存储器中，然后执行。
 ``<test_name>_dumpelf.txt``文件会显示测试程序对应的指令，用于进行debug时给读者查询指令
