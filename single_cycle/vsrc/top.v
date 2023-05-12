@@ -15,13 +15,13 @@ module top(
   wire [63:0]  acs_addr    ;  
   wire [63:0]  acs_wdata   ;
   wire [63:0]  acs_rdata   ; 
+  wire         acs_error   ;
   wire [63:0]  pc          ;
   wire         ebreak      ;
 
 
   assign diff_rstn = rstn;
   assign diff_clk  = clk ;
-
 
 
   initial begin: watching_dog
@@ -41,6 +41,7 @@ module top(
     rstn = 1'b1;
   end
 
+
 cpu cpu_inst (
   .clk        ( clk        )  ,
   .rstn       ( rstn       )  ,
@@ -55,47 +56,91 @@ cpu cpu_inst (
   .ebreak     ( ebreak     )   
 );
 
-wire  [63:0]  mmy_rdata;
+
+bus bus_inst (
+  .acs_en      ( acs_en      )  ,
+  .acs_wr      ( acs_wr      )  ,
+  .acs_bytes   ( acs_bytes   )  ,
+  .acs_addr    ( acs_addr    )  ,
+  .acs_wdata   ( acs_wdata   )  ,
+  .acs_rdata   ( acs_rdata   )  ,
+  .acs_error   ( acs_error   )  ,
+                            
+  .mmy_cen     ( mmy_cen     )  ,
+  .mmy_wr      ( mmy_wr      )  ,
+  .mmy_strb    ( mmy_strb    )  ,
+  .mmy_addr    ( mmy_addr    )  ,
+  .mmy_wdata   ( mmy_wdata   )  ,
+  .mmy_rdata   ( mmy_rdata   )  ,
+  .mmy_error   ( mmy_error   )  ,
+                            
+  .uart_cen    ( uart_cen    )  ,
+  .uart_wr     ( uart_wr     )  ,
+  .uart_wdata  ( uart_wdata  )  ,
+  .uart_error  ( uart_error  )  ,
+                            
+  .timer_cen   ( timer_cen   )  ,
+  .timer_wr    ( timer_wr    )  ,
+  .timer_rdata ( timer_rdata )  ,
+  .timer_error ( timer_error )  
+);
+
+
+  wire          mmy_cen     ;
+  wire          mmy_wr      ;
+  wire  [7:0]   mmy_strb    ;
+  wire  [26:0]  mmy_addr    ;
+  wire  [63:0]  mmy_wdata   ;
+  wire  [63:0]  mmy_rdata   ;
+  wire          mmy_error   ;
+
+  wire          uart_cen    ;
+  wire          uart_wr     ;
+  wire  [7:0]   uart_wdata  ;
+  wire          uart_error  ;
+
+  wire          timer_cen   ;
+  wire          timer_wr    ;
+  wire  [63:0]  timer_rdata ;
+  wire          timer_error ;
+
+  wire  mmy_icen = (pc[63:32]==32'b0) && (pc[31:27]==5'b1000_0) ;
+  wire  [26:0]  mmy_iaddr = pc[26:0] ;
+
 memory memory_inst(
    .clk    ( clk       )  ,
-   .pc     ( pc        )  ,
+   .icen   ( mmy_icen  )  ,
+   .iaddr  ( mmy_iaddr )  ,
    .instr  ( instr     )  ,
-   .en     ( acs_en    )  ,
-   .wr     ( acs_wr    )  ,
-   .strb   ( acs_bytes )  ,
-   .addr   ( acs_addr  )  ,
-   .wdata  ( acs_wdata )  ,
-   .rdata  ( mmy_rdata )  
+
+   .dcen   ( mmy_cen   )  ,
+   .wr     ( mmy_wr    )  ,
+   .strb   ( mmy_strb  )  ,
+   .daddr  ( mmy_addr  )  ,
+   .wdata  ( mmy_wdata )  ,
+   .rdata  ( mmy_rdata )  ,
+   .error  ( mmy_error )  
 );
 
-`ifdef DEVICE_UART
-wire  uart_wen = acs_en & acs_wr ;
+
 uart  uart_inst(
-  .clk   ( clk       ) ,
-  .rstn  ( rstn      ) ,
-  .wen   ( uart_wen  ) ,
-  .wdata ( acs_wdata ) ,
-  .waddr ( acs_addr  ) 
+  .clk   ( clk        ) ,
+  .rstn  ( rstn       ) ,
+  .cen   ( uart_cen   ) ,
+  .wr    ( uart_wr    ) ,
+  .wdata ( uart_wdata ) ,
+  .error ( uart_error )
 );
-`endif
 
 
-`ifdef DEVICE_TIMER
-wire  timer_ren = acs_en & !acs_wr ;
-wire  [63:0]  timer_rdata;
 timer timer_inst(
   .clk    ( clk         ) ,
   .rstn   ( rstn        ) ,
-  .ren    ( timer_ren   ) ,
-  .raddr  ( acs_addr    ) ,
-  .rdata  ( timer_rdata )  
+  .cen    ( timer_cen   ) ,
+  .wr     ( timer_wr    ) ,
+  .rdata  ( timer_rdata ) ,
+  .error  ( timer_error ) 
 );
-assign acs_rdata = mmy_rdata | timer_rdata ;
-`else
-assign acs_rdata = mmy_rdata  ;
-`endif
-
-
 
 
   always@(posedge clk) begin
@@ -108,32 +153,28 @@ assign acs_rdata = mmy_rdata  ;
     end
   end
 
+  always@(posedge clk) begin:access_error
+    if(acs_error) begin
+        $display("\033[1;31mACCSEE FAIL at %0tns\033[1;31m", $time);
+        $finish;
+    end
+  end:access_error
+
   import "DPI-C" function void set_gpr_ptr(input logic [63:0] a []);
   initial set_gpr_ptr(cpu_inst.regfile_inst.gpr);
 
   import "DPI-C" function void set_pc(input logic [63:0] b[]);
   initial set_pc(pc);
 
-  /*
-  import "DPI-C" function void set_pmem(input logic [7:0] c[]);
-  initial set_pmem(memory_inst.data);
-  */
 
   wire  _unused_ok = & { 1'b0,
-                         acs_addr,
-                         pc      ,
                          cpu_inst.regfile_inst.gpr_wen,
                          cpu_inst.exu_inst.productu,
                          cpu_inst.exu_inst.productsu,
                          cpu_inst.exu_inst.productw,
                          cpu_inst.decoder_inst.opcode_4_2__010,
                          cpu_inst.decoder_inst.opcode_4_2__111,
-                         cpu_inst.decoder_inst.opcode_6_5__10 ,
-                         memory_inst.pc,
-                         memory_inst.addr
-                         `ifdef DEVICE_UART
-                         , uart_inst.wdata
-                         `endif
+                         cpu_inst.decoder_inst.opcode_6_5__10  
                        };
 
   string img_file ;
@@ -147,3 +188,4 @@ assign acs_rdata = mmy_rdata  ;
   end
 
 endmodule
+

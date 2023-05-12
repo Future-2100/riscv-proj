@@ -1,13 +1,15 @@
 `include "default.v"
 
 module timer(
-  input   wire    clk  ,
-  input   wire    rstn ,
+  input   wire            clk    ,
+  input   wire            rstn   ,
 
-  input   wire            ren    ,
-  input   wire    [63:0]  raddr  ,
-  output  wire    [63:0]  rdata   
+  input   wire            cen    ,
+  input   wire            wr     ,
+  output  wire    [63:0]  rdata  ,
+  output  wire            error   
 );
+
 
 reg  [63:0]  counter;
 always@(posedge clk) begin
@@ -17,11 +19,8 @@ always@(posedge clk) begin
     counter <= counter + 1'b1;
 end
 
-wire    sel  =  ren && (raddr == 64'hb000_0000) ;
-
-assign  rdata = sel ? counter : 64'b0;
+assign rdata = (cen && !wr) ? counter : 64'b0 ;
+assign error =  cen &&  wr ;
 
 endmodule
-
-
 

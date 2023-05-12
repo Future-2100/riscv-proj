@@ -95,7 +95,7 @@ $(IMAGE).elf: $(IMAGE).o $(DST_DIR)/am.a $(DST_DIR)/klib.a
 
 $(IMAGE).bin: $(IMAGE).elf
 	$(OBJCOPY) -S -O binary $(realpath $<) $@
-	xxd -e -b $@ | sed 's/.*: //' | sed 's/  .*//' > $(IMAGE).txt
+	xxd -e -b $@ | sed 's/  .*//' | sed 's/.*: //' > $(IMAGE).txt
 	$(OBJDUMP) -d $^ > $(IMAGE)_dumpelf.txt
 
 $(RUN_FILE):

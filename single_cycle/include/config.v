@@ -3,9 +3,9 @@
 
 `define PERIOD  20
 
-//`define DEVICE_UART
-//
-//`define DEVICE_TIMER
+`define DEVICE_UART
+
+`define DEVICE_TIMER
 
 `endif
 

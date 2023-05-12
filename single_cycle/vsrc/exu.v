@@ -139,7 +139,7 @@ module exu (
   wire  [63:0]  sra_rslt = (srl_rslt & sra_mask) | ( {64{data_rs1[63]}} & ~sra_mask );
 
   wire  [63:0]  arith_rslt =  ( {64{add |addi }} & (data_rs1 +   arith_in2) ) |
-                              ( {64{sub       }} & (data_rs1 +   arith_in2) ) |
+                              ( {64{sub       }} & (data_rs1 -   arith_in2) ) |
                               ( {64{and_|andi }} & (data_rs1 &   arith_in2) ) |
                               ( {64{or_ |ori  }} & (data_rs1 |   arith_in2) ) |
                               ( {64{xor_|xori }} & (data_rs1 ^   arith_in2) ) |
