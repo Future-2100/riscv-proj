@@ -1,5 +1,8 @@
 .PHONY: allrun all clean $(ALL)
 
+ARCH = rv64
+#ARCH = rv32
+
 COLOR_RED   = \033[1;31m
 COLOR_GREEN = \033[1;32m
 COLOR_YELLOW= \033[1;33m
@@ -27,7 +30,18 @@ ALL = $(basename $(notdir $(shell find $(TEST_DIR) -name "*.c")))
 
 default: $(IMAGE).bin
 
+ifeq ($(ARCH),rv32)
+CROSS_COMPILE = riscv32-unknown-linux-gnu
+SFLAGS = -fno-pic -mcmodel=medany -mstrict-align -march=rv32g -mabi=ilp32 
+else
+ifeq ($(ARCH), rv64)
 CROSS_COMPILE = riscv64-linux-gnu
+SFLAGS = -fno-pic -mcmodel=medany -mstrict-align -march=rv64g 
+else
+	$(shell echo "error: ARCH has never defined as rv32 or rv64")
+endif
+endif
+
 AS = $(CROSS_COMPILE)-as
 CC = $(CROSS_COMPILE)-gcc
 CXX = $(CROSS_COMPILE)-g++
@@ -37,8 +51,6 @@ OBJCOPY = $(CROSS_COMPILE)-objcopy
 READELF = $(CROSS_COMPILE)-readelf
 OBJCOPY = $(CROSS_COMPILE)-objcopy
 
-SFLAGS = -fno-pic -march=rv64g -mcmodel=medany -mstrict-align 
-#-mabi=ilp32 
 
 SFLAGS += -I$(INC_DIR)
 CFLAGS += -Wall -Werror -std=gnu11 -O0
@@ -84,7 +96,7 @@ $(DST_DIR)/am.a: $(DST_DIR)/start.o $(DST_DIR)/trm.o
 $(DST_DIR)/klib.a: $(DST_DIR)/string.o $(DST_DIR)/stdio.o
 	ar rcs $@ $^
 
-LD_FLAGS = -melf64lriscv
+#LD_FLAGS = -melf64lriscv
 LD_FLAGS += -T $(WORK_DIR)/script/linker.ld
 #LD_FLAGS += --defsym=_pmem_start=0x80000000 --defsym=_entry_offset=0x0 --gc-sections 
 LD_FLAGS += -e _start
