@@ -46,6 +46,7 @@ RISC-V单周期CPU
                               8'b11         ---半字(half word, 16位);
                               8'b1111       ---字(word, 32位);
                               8'b1111_1111  ---双字(double world, 64位)
+
 * ``acs_addr``  访存地址信号
 * ``acs_wdata`` 当执行store指令时，该信号表示需要写入的数据
 * ``acs_rdata`` 当执行load指令时，该信号表示读取的数据
