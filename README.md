@@ -5,9 +5,9 @@ RISC-V单周期CPU
 * 提供给CPU运行的测试程序，在``riscv_compile``文件夹下
 
 # 1. single\_cycle
-
 ``single_cycle/vsrc/cpu``文件夹下包含了risc-v单周期CPU的设计文件,
 该设计使用verilog硬件描述语言进行编写,只实现了RV64IM指令集
+---
 
 本设计有一块存储区域以及串口和定时器这两个外设,位于``single_cycle/vsrc/env``中。
 * memory: 存储器，地址从``0x8000_0000`` - ``0x87ff_ffff``。
@@ -28,14 +28,14 @@ RISC-V单周期CPU
 
 ## 个人CPU与本仿真环境对接
 可将``single_cycle/vsrc/cpu``中的verilog文件替换成你自己的CPU设计文档，以对接本仿真环境。CPU模块的接口规范如下: 
+---
 1. 设计要求
   * 设计必须是单周期CPU
   * 设计使用的仿真软件为verilator，版本为verilator 5.009
   * 设计的顶层模块名必须为``cpu``
   * 设计的输入输出信号必须与本设计的输入输出信号保持完全一致，见代码``single_cycle/vsrc/cpu/cpu.v``。
   * 设计内部不得包含存储器和外设模块，对存储器和外设的访问均通过``acs_*``信号，取指通过``pc``和``instr``信号
-
-
+---
 2. `cpu`模块的输入输出信号功能定义:
   * ``clk``       ：全局时钟信号
   * ``rstn``      ：全局复位信号，低电平复位
@@ -54,19 +54,22 @@ RISC-V单周期CPU
   * ``acs_rdata`` ：当执行load指令时，该信号表示读取的数据
   * ``ebreak``    ：当执行的指令为ebreak时，该信号需为高电平。
 ebreak指令在risc-v指令集中表示进入debug模式，本设计没有debug模式，ebreak在本设计中作为程序运行结束的标志，用于结束仿真。
-
+---
 
 在``single_cycle``文件夹下输入命令
 ```bash
-make
+$ make
 ```
 即可对设计进行编译,编译后会在``single_cycle/build``文件夹下生成``top``可执行文件。
 
 
 ## difftest功能介绍
 difftest是CPU验证的常用方法，能够快速定位设计中的错误，difftest的模型文件为``single_cycle/riscv64-nemu-interpreter-so``，该模型为一生一芯中不完整的nemu模型，可用于验证RV64G指令集。
-若想关闭difftest功能，则在``single_cycle/include/config.h``文件中将``#define DIFFTEST``注释掉
+
+若想关闭difftest功能，则在``single_cycle/include/config.h``文件中将``#define DIFFTEST``注释掉。
+
 **注意: 若运行的测试程序需要对串口或定时器进行访问，则必须关掉difftest再编译仿真，否则difftest必然会报错并终止仿真**
+
 
 
 # 2. riscv\_compile
@@ -85,27 +88,27 @@ difftest是CPU验证的常用方法，能够快速定位设计中的错误，dif
 ### 一键编译并运行仿真测试所有测试程序
 在``riscv_compile``路径下输入命令：
 ```bash
-make runall
+$ make runall
 ```
 
 ### 编译单个测试程序并运行仿真
 在``riscv_compile``路径下输入命令：
 ```bash
-make runall ALL=<test_name>
+$ make runall ALL=<test_name>
 ```
 或者在``riscv_compile``路径下输入命令：
 ```bash
-make run NAME=<test_name>
+$ make run NAME=<test_name>
 ```
 即可编译``<test_name>``测试程序，并将测试程序载入``single_cycle``文件夹下的单周期CPU设计中进行仿真
 
 例如，运行dummy测试程序，则应在``riscv_compile``文件夹下执行
 ```bash
-make runall ALL=dummy
+$ make runall ALL=dummy
 ```
 或者
 ```bash
-make run NAME=dummy
+$ make run NAME=dummy
 ```
 即可编译``dummy``测试程序并在单周期CPU中运行
 
