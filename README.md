@@ -42,11 +42,11 @@ RISC-V单周期CPU
 * ``acs_en``    访存有效信号，当执行load或store指令时，该信号需为高电平。
 * ``acs_wr``    访存写信号，当执行store指令时，该信号需为高电平。
 * ``acs_bytes`` 访存字节信号，
+
                               8'b1          ---字节(byte, 8位);
                               8'b11         ---半字(half word, 16位);
                               8'b1111       ---字(word, 32位);
                               8'b1111_1111  ---双字(double world, 64位)
-
 * ``acs_addr``  访存地址信号
 * ``acs_wdata`` 当执行store指令时，该信号表示需要写入的数据
 * ``acs_rdata`` 当执行load指令时，该信号表示读取的数据
