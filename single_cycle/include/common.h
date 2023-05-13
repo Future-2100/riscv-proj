@@ -8,7 +8,6 @@
 
 #include <config.h>
 
-
 typedef struct{
   uint64_t gpr[32];
   uint64_t pc     ;

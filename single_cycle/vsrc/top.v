@@ -1,5 +1,4 @@
 `include "default.v"
-`include "config.v"
 
 module top(
   output    wire   diff_clk   ,
@@ -24,11 +23,13 @@ module top(
   assign diff_clk  = clk ;
 
 
+`ifdef DIFFTEST
   initial begin: watching_dog
     #(70000*`PERIOD) ;
     $display("\033[1;31m------------------------time out----------------------------\033[0m"); 
     $finish;
   end
+`endif
 
 
   always #(`PERIOD/2) clk <= ~clk ;

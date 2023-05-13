@@ -1,24 +1,64 @@
-# 1. single\_cycle
+RISC-V单周期CPU
+===============
+这是一个64位的RISC-V单周期CPU的文档，包含了两个模块：
+* 单周期CPU的RTL设计文档，在``single_cycle``文件夹下
+* 提供给CPU运行的测试程序，在``riscv_compile``文件夹下
 
-``single_cycle``文件夹下包含了risc-v单周期CPU的设计文件
+# <a name="single_cycle"></a>single\_cycle
+
+``single_cycle/vsrc/cpu``文件夹下包含了risc-v单周期CPU的设计文件,
 该设计使用verilog硬件描述语言进行编写,只实现了RV64IM指令集
 
-本设计添加了串口和定时器两个外设。
-串口地址为0xa0000000，为一个8位可写不可读的寄存器。
-定时器地址为0xb0000000，为一个64位只读寄存器。
-若不需要这两个外设中的任何一个，可在``single_cycle/include/config.v``文件中将`` `define DEVICE_UART``或者`` `define DEVICE_TIMER``注释掉
+本设计有一块存储区域以及串口和定时器这两个外设,位于``single_cycle/vsrc/env``中。
+* memory: 存储器，地址从``0x8000_0000`` - ``0x87ff_ffff``。
+共128MB的存储空间，支持非对齐访问。实现代码见``single_cycle/vsrc/env/memory.v``
+* uart : 串口,地址为``0xa000_0000``，为一个8位可写不可读的寄存器。
+当CPU对地址0xa0000000进行写操作时，会将写入的数据以ASCII编码的字符串的形式打印出来。实现代码见``single_cycle/vsrc/env/uart.v``
+* timer: 定时器,地址为``0xb000_0000``，为一个64位只读寄存器。
+当CPU对地址0xb0000000进行读操作时，会将CPU自复位以来的时钟周期数读取出来。实现代码见``single_cycle/vsrc/env/timer.v``
+
 本设计没有实现中断，因此这两个外设都只能通过地址寻址的方式进行访问，即通过load、store指令对其进行读写。
 
+**若运行的测试程序需要使用串口或者定时器，则必须关闭difftest功能!**
 
-串口的功能：当对地址0xa0000000进行写操作时，会将写入的数据以ASCII编码的字符串的形式打印出来。
+可通过修改``single_cycle/include/default.v``文件中``PERIOD``的值来调整仿真的周期。
+
+可通过修改``single_cycle/include/default.v``文件中```timescale``的值来调整仿真时间的单位和精度。
+
+
+## 个人CPU与本仿真环境对接
+可将``single_cycle/vsrc/cpu``中的verilog文件替换成你自己的CPU设计文档,以对接本仿真环境。CPU模块的接口规范如下: 
+* 设计必须是单周期CPU
+* 设计的顶层模块名必须为``cpu``
+* 设计的输入输出信号必须与本设计的输入输出信号保持完全一致，见代码``single_cycle/vsrc/cpu/cpu.v``。
+* 设计内部不得包含存储器和外设模块，对存储器和外设的访问均通过``acs_*``信号，取指通过``pc``和``instr``信号
+* `cpu`模块的输入输出信号的功能介绍如下:
+* ``clk``  全局时钟信号
+* ``rstn`` 全局复位信号，低电平复位
+* ``pc``   取指令的地址信号
+* ``instr`` 指令信号，同周期返回memory模块中pc地址对应的32位数据。
+* ``acs_en`` 访存有效信号，当执行load或store指令时，该信号需为高电平。
+* ``acs_wr`` 访存写信号，当执行store指令时，该信号需为高电平。
+* ``acs_bytes`` 访存字节信号，8'b1          ---字节(byte, 8位)
+                              8'b11         ---半字(half word, 16位)
+                              8'b1111       ---字(word, 32位)
+                              8'b1111_1111  ---双字(double world, 64位)
+* ``acs_addr`` 访存地址信号
+* ``acs_wdata`` 当执行store指令时，该信号表示需要写入的数据
+* ``acs_rdata`` 当执行load指令时，该信号表示读取的数据
+* ``ebreak``  当执行的指令为ebreak时，该信号需为高电平。
+ebreak指令在risc-v指令集中表示进入debug模式，本设计没有debug模式，ebreak在本设计中作为程序运行结束的标志，用于结束仿真。
+
+
+
+# difftest功能介绍
+
+
 为了方便使用，已经在``riscv_compile/src/klib/stdio.c``中定义好了printf函数。
 测试程序中直接使用printf函数即可输出想要的内容。
-**若开启了串口功能，则必须关闭difftest！**
 这里的测试程序指的是需要经过``riscv_compile``文件夹下的makefile脚本文件编译的程序，应当使用C语言编写，并且放在``riscv_compile/src/tests``文件夹下
 
 
-可通过修改``single_cycle/include/config.v``文件中``PERIOD``的值来调整仿真的周期。
-可通过修改``single_cycle/include/default.v``文件中```timescale``的值来调整仿真时间的单位和精度。
 
 仿真文件有3个，分别是``single_cycle/vsrc/top.v``、``single_cycle/csrc/sim_main.cpp``、 ``single_cycle/csrc/difftest.c``
 本设计使用verilator进行仿真验证，使用的版本为verilator 5.009

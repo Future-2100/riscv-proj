@@ -37,7 +37,8 @@ OBJCOPY = $(CROSS_COMPILE)-objcopy
 READELF = $(CROSS_COMPILE)-readelf
 OBJCOPY = $(CROSS_COMPILE)-objcopy
 
-SFLAGS = -fno-pic -march=rv64g -mcmodel=medany -mstrict-align
+SFLAGS = -fno-pic -march=rv64g -mcmodel=medany -mstrict-align 
+#-mabi=ilp32 
 
 SFLAGS += -I$(INC_DIR)
 CFLAGS += -Wall -Werror -std=gnu11 -O0
