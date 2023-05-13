@@ -4,7 +4,7 @@ RISC-V单周期CPU
 * 单周期CPU的RTL设计文档，在``single_cycle``文件夹下
 * 提供给CPU运行的测试程序，在``riscv_compile``文件夹下
 
-# <a name="single_cycle"></a>single\_cycle
+# 1. single\_cycle
 
 ``single_cycle/vsrc/cpu``文件夹下包含了risc-v单周期CPU的设计文件,
 该设计使用verilog硬件描述语言进行编写,只实现了RV64IM指令集
@@ -29,6 +29,7 @@ RISC-V单周期CPU
 ## 个人CPU与本仿真环境对接
 可将``single_cycle/vsrc/cpu``中的verilog文件替换成你自己的CPU设计文档,以对接本仿真环境。CPU模块的接口规范如下: 
 * 设计必须是单周期CPU
+* 设计使用的仿真软件为verilator，版本为verilator 5.009
 * 设计的顶层模块名必须为``cpu``
 * 设计的输入输出信号必须与本设计的输入输出信号保持完全一致，见代码``single_cycle/vsrc/cpu/cpu.v``。
 * 设计内部不得包含存储器和外设模块，对存储器和外设的访问均通过``acs_*``信号，取指通过``pc``和``instr``信号
@@ -43,32 +44,15 @@ RISC-V单周期CPU
 * ``acs_wr``    ：访存写信号，当执行store指令时，该信号需为高电平。
 * ``acs_bytes`` ：访存字节信号，
 
-                              8'b1          ---字节(byte, 8位);
-                              8'b11         ---半字(half word, 16位);
-                              8'b1111       ---字(word, 32位);
+                              8'b1          ---字节(byte, 8位)
+                              8'b11         ---半字(half word, 16位)
+                              8'b1111       ---字(word, 32位)
                               8'b1111_1111  ---双字(double world, 64位)
 * ``acs_addr``  ：访存地址信号
 * ``acs_wdata`` ：当执行store指令时，该信号表示需要写入的数据
 * ``acs_rdata`` ：当执行load指令时，该信号表示读取的数据
 * ``ebreak``    ：当执行的指令为ebreak时，该信号需为高电平。
 ebreak指令在risc-v指令集中表示进入debug模式，本设计没有debug模式，ebreak在本设计中作为程序运行结束的标志，用于结束仿真。
-
-
-
-# difftest功能介绍
-
-
-为了方便使用，已经在``riscv_compile/src/klib/stdio.c``中定义好了printf函数。
-测试程序中直接使用printf函数即可输出想要的内容。
-这里的测试程序指的是需要经过``riscv_compile``文件夹下的makefile脚本文件编译的程序，应当使用C语言编写，并且放在``riscv_compile/src/tests``文件夹下
-
-
-
-仿真文件有3个，分别是``single_cycle/vsrc/top.v``、``single_cycle/csrc/sim_main.cpp``、 ``single_cycle/csrc/difftest.c``
-本设计使用verilator进行仿真验证，使用的版本为verilator 5.009
-仿真使用了difftest进行验证，以快速查找设计中的错误，difftest的模型文件为``single_cycle/riscv64-nemu-interpreter-so``
-若想关闭difftest功能，则可在``single_cycle/include/config.h``文件中将``#define DIFFTEST``注释掉
-**注意: 若设计中添加了串口或者定时器，并且运行的程序需要对串口或者定时器进行访问，那么必须关掉difftest再编译仿真，否则difftest必然会报错并终止仿真**
 
 
 在``single_cycle``文件夹下输入命令
@@ -78,20 +62,32 @@ make
 即可对设计进行编译,编译后会在``single_cycle/build``文件夹下生成``top``可执行文件。
 
 
+## difftest功能介绍
+difftest是CPU验证的常用方法，能够快速定位设计中的错误，difftest的模型文件为``single_cycle/riscv64-nemu-interpreter-so``，该模型为一生一芯中不完整的nemu模型，可用于验证RV64G指令集。
+若想关闭difftest功能，则在``single_cycle/include/config.h``文件中将``#define DIFFTEST``注释掉
+**注意: 若运行的测试程序需要对串口或定时器进行访问，则必须关掉difftest再编译仿真，否则difftest必然会报错并终止仿真**
+
 
 # 2. riscv\_compile
+``riscv_compile``用于将C语言程序编译成risc-v指令集的程序，编译生成的程序文件用于在单周期CPU中运行。
 
-``riscv_compile``文件夹下包含了33个测试程序，位于``riscv_compile/src/tests``文件夹下,用于验证单周期CPU的正确性
-``riscv_compile/src/klib``文件夹下包含了编译测试程序所需的文件
+``riscv_compile/src/tests``文件夹下包含了33个测试程序,用于验证单周期CPU的正确性
+
+若要自己编写测试程序，则测试程序文件可以是以.c结尾的C语言程序文件，也可以是以.S结尾的汇编程序文件。
+
+测试程序可以使用printf函数打印字符串，该函数会访问单周期CPU中的uart外设，因此若使用了printf函数，则必须关闭difftest功能。
+
+``riscv_compile/src/klib``文件夹下包含了CPU正常运行程序所需的运行时环境，以及一些常用的库函数。
+
 ``riscv_compile/script/linker.ld``为链接脚本
 
-## 一键编译并运行仿真测试所有测试程序
+### 一键编译并运行仿真测试所有测试程序
 在``riscv_compile``路径下输入命令：
 ```bash
 make runall
 ```
 
-## 编译单个测试程序并运行仿真
+### 编译单个测试程序并运行仿真
 在``riscv_compile``路径下输入命令：
 ```bash
 make runall ALL=<test_name>
@@ -112,21 +108,21 @@ make run NAME=dummy
 ```
 即可编译``dummy``测试程序并在单周期CPU中运行
 
-``test_name``可在``riscv_compile/src/tests``文件夹下查看，测试程序的文件名为``<test_name>.c``
+``test_name``可在``riscv_compile/src/tests``文件夹下查看，测试程序的文件名为``<test_name>.c``或者``<test_name>.S``
 
 
-## 只编译单个测试程序，不运行仿真
+### 只编译单个测试程序，不运行仿真
 在``riscv_compile``路径下输入命令：
 ```bash
 make NAME=<test_name>
 ```
-即可编译``<test_name>``测试程序
-编译会在``riscv_compile/build``文件夹下生成四个文件，分别是``<test_name>.elf``、``<test_name>.bin``、``<test_name>.txt``以及``<test_name>_dumpelf.txt``
-``<test_name>.bin``文件是测试程序的二进制文件，包含了测试程序的指令和数据
-``<test_name>.txt``文件是将``<test_name>.bin``文件以ASCII字符0和1的形式显示的结果,单周期CPU中的``top``模块会使用``$readmemb()``函数将``<test_name.txt>``文件数据载入存储器中，然后执行。
-``<test_name>_dumpelf.txt``文件会显示测试程序对应的指令，用于进行debug时给读者查询指令
-要想查询``<test_name>``测试程序的汇编指令，可在``riscv_compile``路径下输入命令：
+即可编译``<test_name>``测试程序。
+编译会在``riscv_compile/build``文件夹下生成四个文件，分别是``<test_name>.elf``、``<test_name>.bin``、``<test_name>.txt``以及``<test_name>_dumpelf.txt``。
+* ``<test_name>.bin``文件是测试程序的二进制文件，包含了测试程序的指令和数据
+* ``<test_name>.txt``文件是将``<test_name>.bin``文件以ASCII字符0和1的形式显示的结果,单周期CPU中的``top``模块会使用``$readmemb()``函数将``<test_name.txt>``文件数据载入存储器中，然后执行。
+* ``<test_name>_dumpelf.txt``文件会显示测试程序对应的指令，用于进行debug时给读者查询指令
 
+要想查询``<test_name>``测试程序的汇编指令，可在``riscv_compile``路径下输入命令：
 ```bash
 make readelf NAME=<test_name>
 ```
