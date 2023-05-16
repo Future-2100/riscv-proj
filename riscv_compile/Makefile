@@ -140,19 +140,19 @@ LDFLAGS += -e _start
 
 ############################## compile rules ###############################
 $(DSTDIR)/%.o: $(SRCDIR)/%.c
-	@mkdir -p $(dir $@) && echo +CC "->" $<
+	@mkdir -p $(dir $@) && echo +CC "->" $(notdir $<)
 	@$(CC) -std=gnu11 $(CFLAGS) -c -o $@ $<
 
 $(DSTDIR)/%.o: $(SRCDIR)/%.cc
-	@mkdir -p $(dir $@) && echo +CXX "->" $<
+	@mkdir -p $(dir $@) && echo +CXX "->" $(notdir $<)
 	@$(CXX) -std=c++17 $(CXXFLAGS) -c -o $@ $<
 
 $(DSTDIR)/%.o: $(SRCDIR)/%.cpp
-	@mkdir -p $(dir $@) && echo +CXX "->" $<
+	@mkdir -p $(dir $@) && echo +CXX "->" $(notdir $<)
 	@$(CXX) -std=c++17 $(CXXFLAGS) -c -o $@ $<
 
 $(DSTDIR)/%.o: $(SRCDIR)/%.S
-	@mkdir -p $(dir $@) && echo +AS "->" $<
+	@mkdir -p $(dir $@) && echo +AS "->" $(notdir $<)
 	@$(AS) $(ASFLAGS) -c -o $@ $<
 
 $(LIBS): %: $(LIBOBJS)
