@@ -23,7 +23,7 @@ module top(
   assign diff_clk  = clk ;
 
 
-`ifdef DIFFTEST
+`ifdef __DIFFTEST__
   initial begin: watching_dog
     #(70000*`PERIOD) ;
     $display("\033[1;31m------------------------time out----------------------------\033[0m"); 
@@ -105,7 +105,10 @@ bus bus_inst (
   wire  [63:0]  timer_rdata ;
   wire          timer_error ;
 
-  wire  mmy_icen = (pc[63:32]==32'b0) && (pc[31:27]==5'b1000_0) ;
+  //wire  mmy_icen = (pc[63:32]==32'b0) && (pc[31:27]==5'b1000_0) ;
+  
+  wire  pc_error = (pc[63:32] != 32'b0) && (pc[63:32] != 32'hffff_ffff) ;
+  wire  mmy_icen =  (pc[31:27]==5'b1000_0) && !pc_error ;
   wire  [26:0]  mmy_iaddr = pc[26:0] ;
 
 memory memory_inst(
@@ -155,8 +158,8 @@ timer timer_inst(
   end
 
   always@(posedge clk) begin:access_error
-    if(acs_error) begin
-        $display("\033[1;31mACCSEE FAIL at %0tns\033[1;31m", $time);
+    if(acs_error | pc_error) begin
+        $display("\033[1;31mACCSEE FAIL at %0tns\033[0m", $time);
         $finish;
     end
   end:access_error
@@ -184,8 +187,10 @@ timer timer_inst(
       $readmemb(img_file, memory_inst.data) ;
       $display("\033[1;33mLoad image : %s \033[0m ", img_file);
     end
+`ifdef __WAVE__
     $dumpfile("wave.vcd");
     $dumpvars(0, tb);
+`endif
   end
 
 endmodule

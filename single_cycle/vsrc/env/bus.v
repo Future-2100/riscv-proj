@@ -32,7 +32,8 @@ module bus (
   input    wire          timer_error 
 );
 
-  wire  en = ( acs_addr[63:32]==32'b0 ) && acs_en ;
+  //wire  en = ( acs_addr[63:32]==32'b0 ) && acs_en ;
+  wire  en = acs_en;
 
   assign  mmy_cen    = en && (acs_addr[31:27] == 5'b1000_0);
   assign  mmy_wr     = acs_wr    ;
@@ -50,9 +51,13 @@ module bus (
   assign  acs_rdata = ( {64{mmy_cen  }} &   mmy_rdata ) |
                       ( {64{timer_cen}} & timer_rdata ) ;
 
+
+  wire   addr_error = acs_en && (acs_addr[63:32] != 32'b0) && (acs_addr[63:32] != 32'hffff_ffff) ;
+
   assign  acs_error =  ( mmy_cen  &   mmy_error) |
                        ( uart_cen &  uart_error) |
-                       (timer_cen & timer_error) ;
+                       (timer_cen & timer_error) |
+                                     addr_error  ;
 
 endmodule
 

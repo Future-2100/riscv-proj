@@ -1,7 +1,10 @@
-.PHONY: allrun all clean $(ALL)
+.PHONY: clean $(ALL) rom runall
 
 ARCH = rv64
 #ARCH = rv32
+
+#TEST = en
+#GAME = en
 
 COLOR_RED   = \033[1;31m
 COLOR_GREEN = \033[1;32m
@@ -12,37 +15,84 @@ COLOR_DARK_GREEN = \033[1;36m
 COLOR_WHITE = \033[1;37m
 COLOR_NONE  = \033[0m
 
-WORK_DIR = $(shell pwd)
-DST_DIR = $(WORK_DIR)/build
-$(shell mkdir -p $(DST_DIR))
-TEST_DIR = $(WORK_DIR)/src/tests
-KLIB_DIR = $(WORK_DIR)/src/klib
-INC_DIR = $(WORK_DIR)/include
-IMAGE = $(DST_DIR)/$(NAME)
 
-CPU_DIR = /home/wuchenze/riscv-proj/single_cycle
-RUN_FILE = $(CPU_DIR)/build/top
+############################## direction ###############################
+WORKDIR = $(shell pwd)
+DSTDIR = $(WORKDIR)/build
+$(shell mkdir -p $(DSTDIR))
 
-RESULT = .result
-#$(shell > .result)
+INCDIR += $(WORKDIR)/include
+SRCDIR  = $(WORKDIR)/src
 
-ALL = $(basename $(notdir $(shell find $(TEST_DIR) -name "*.c")))
+TESTDIR = $(SRCDIR)/tests
+GAMEDIR = $(SRCDIR)/game
+LIBDIR  = $(SRCDIR)/libs
+
+
+ifeq ($(TEST),en)
+
+SRCS = $(shell find $(TESTDIR) -name "$(NAME).c" -o -name "$(NAME).S")
+COMPILE_CPU_FLAGS += WAVE=en
+COMPILE_CPU_FLAGS += DIFFTEST=en
+endif
+
+ifeq ($(GAME),en)
+
+NAME = game
+
+ROM_PATH = $(GAMEDIR)/nes
+ROMS     = $(shell ls $(ROM_PATH)/rom/*.nes)
+ROM_SRC  = $(addprefix $(ROM_PATH)/gen/, $(addsuffix .c, $(notdir $(basename $(ROMS)))))
+GAME_SRC = $(shell find -L $(GAMEDIR)/src/ -name "*.c" -o -name "*.cpp")
+#INCDIR += $(ROM_PATH)/gen/
+
+GAMEINC = $(sort $(dir $(shell find $(GAMEDIR) -name "*.h")))
+INCDIR += $(GAMEINC)
+
+SRCS = $(GAME_SRC) $(ROM_SRC)
+
+CFLAGS += -DPSS_STYLE=1 -DPRAMESKIP -D__NO_FILE_SYSTEM__
+CFLAGS += -D__ISA__=\"riscv64\"
+CFLAGS += -D__ISA_RISCV64__
+CFLAGS += -D__ARCH__=riscv64-npc
+CFLAGS += -D__ARCH_RISCV64_NPC
+CFLAGS += -D__PLATFORM__=npc
+CFLAGS += -D__PLATFORM_NPC
+CFLAGS += -DARCH_H=\"arch/riscv64-nemu.h\"
+
+rom:
+	@-cd $(ROM_PATH) && python3 build-roms.py
+
+$(ROM_SRC): rom
+
+endif
+
+IMAGE = $(DSTDIR)/$(NAME)
+
+OBJS := $(subst $(WORKDIR)/src/, , $(SRCS))
+OBJS := $(basename $(OBJS))
+OBJS := $(addsuffix .o, $(OBJS))
+OBJS := $(addprefix $(DSTDIR)/, $(OBJS))
+
+LIBS := lib
+LIBS := $(addsuffix .a, $(addprefix $(DSTDIR)/libs/, $(LIBS)))
+
+LIBOBJS := $(shell find $(LIBDIR) -name "*.c" -o -name "*.S")
+LIBOBJS := $(basename $(notdir $(LIBOBJS)))
+LIBOBJS := $(addprefix $(DSTDIR)/libs/, $(addsuffix .o, $(LIBOBJS)))
+
+LINKAGE = $(OBJS) $(LIBS)
+
+CPUDIR = $(WORKDIR)/../single_cycle
+RUNFILE = $(CPUDIR)/build/top
 
 default: $(IMAGE).bin
 
-ifeq ($(ARCH),rv32)
-CROSS_COMPILE = riscv32-unknown-linux-gnu
-SFLAGS = -fno-pic -mcmodel=medany -mstrict-align -march=rv32g -mabi=ilp32 
-else
-ifeq ($(ARCH), rv64)
+############################## compiler ###############################
 CROSS_COMPILE = riscv64-linux-gnu
-SFLAGS = -fno-pic -mcmodel=medany -mstrict-align -march=rv64g 
-else
-	$(shell echo "error: ARCH has never defined as rv32 or rv64")
-endif
-endif
+#CROSS_COMPILE = riscv32-unknown-linux-gnu
 
-AS = $(CROSS_COMPILE)-as
+AS = $(CROSS_COMPILE)-gcc
 CC = $(CROSS_COMPILE)-gcc
 CXX = $(CROSS_COMPILE)-g++
 LD = $(CROSS_COMPILE)-ld
@@ -52,71 +102,73 @@ READELF = $(CROSS_COMPILE)-readelf
 OBJCOPY = $(CROSS_COMPILE)-objcopy
 
 
-SFLAGS += -I$(INC_DIR)
-CFLAGS += -Wall -Werror -std=gnu11 -O0
-CFLAGS += $(SFLAGS)
-CFLAGS += -fno-asynchronous-unwind-tables -fno-builtin -fno-stack-protector -fdata-sections -ffunction-sections -fomit-frame-pointer
+############################## flags ###############################
+ASFLAGS = -fno-pic -mcmodel=medany -mstrict-align -MMD
+
+ifeq ($(ARCH),rv32)
+ASFLAGS += -march=rv32g -mabi=ilp32
+LDFLAGS = -melf32lriscv
+else
+ifeq ($(ARCH), rv64)
+ASFLAGS += -march=rv64g
+LDFLAGS = -melf64lriscv
+else
+	$(shell echo "error: ARCH has never defined as rv32 or rv64")
+endif
+endif
+
+INCFLAGS += $(addprefix -I, $(INCDIR))
+
+ASFLAGS += $(INCFLAGS)
+
+CFLAGS += $(ASFLAGS)
+CFLAGS += -Wall -Werror -O0
+CFLAGS += -fno-asynchronous-unwind-tables -fno-builtin -fno-stack-protector -fdata-sections -ffunction-sections 
+#-fomit-frame-pointer
 CFLAGS += -Wno-main -U_FORTIFY_SOURCE -static
 
-Makefile.%: $(TEST_DIR)/%.c
-	@/bin/echo -e "-include $(WORK_DIR)/Makefile" > $@
-	@if make -s -f $@ NAME=$* run; then \
-		printf "[%14s] $(COLOR_GREEN) PASS!$(COLOR_NONE) \n" $* >> $(RESULT) ; \
-	else \
-		printf "[%14s] $(COLOR_RED) FALL!$(COLOR_NONE) \n" $* >> $(RESULT) ; \
-	fi
-	-@rm -f Makefile.$*
+CXXFLAGS += $(CFLAGS) -ffreestanding -fno-rtti -fno-exceptions -DMAINARGS=\"mario\"
+CXXFLAGS += -D__CPP__
+
+#ASFLAGS += -O0
+
+LDFLAGS += -T $(WORKDIR)/script/linker.ld
+#LDFLAGS += --defsym=_pmem_start=0x80000000 --defsym=_entry_offset=0x0 
+LDFLAGS += --gc-sections 
+LDFLAGS += -e _start
 
 
-all: $(addprefix Makefile., $(ALL))
-	@echo $(ALL)
+############################## compile rules ###############################
+$(DSTDIR)/%.o: $(SRCDIR)/%.c
+	@mkdir -p $(dir $@) && echo +CC "->" $<
+	@$(CC) -std=gnu11 $(CFLAGS) -c -o $@ $<
 
-#$(ALL): %: Makefile.%
+$(DSTDIR)/%.o: $(SRCDIR)/%.cc
+	@mkdir -p $(dir $@) && echo +CXX "->" $<
+	@$(CXX) -std=c++17 $(CXXFLAGS) -c -o $@ $<
 
-runall: all
-	@cat $(RESULT)
-	@rm $(RESULT)
+$(DSTDIR)/%.o: $(SRCDIR)/%.cpp
+	@mkdir -p $(dir $@) && echo +CXX "->" $<
+	@$(CXX) -std=c++17 $(CXXFLAGS) -c -o $@ $<
 
+$(DSTDIR)/%.o: $(SRCDIR)/%.S
+	@mkdir -p $(dir $@) && echo +AS "->" $<
+	@$(AS) $(ASFLAGS) -c -o $@ $<
 
-$(DST_DIR)/%.o: $(TEST_DIR)/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+$(LIBS): %: $(LIBOBJS)
+	@ar rcs $@ $^
 
-$(DST_DIR)/%.o: $(TEST_DIR)/%.S
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(DST_DIR)/%.o: $(KLIB_DIR)/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(DST_DIR)/%.o: $(KLIB_DIR)/%.S
-	$(CC) $(SFLAGS) -c -o $@ $<
-
-$(DST_DIR)/am.a: $(DST_DIR)/start.o $(DST_DIR)/trm.o
-	ar rcs $@ $^
-
-$(DST_DIR)/klib.a: $(DST_DIR)/string.o $(DST_DIR)/stdio.o
-	ar rcs $@ $^
-
-#LD_FLAGS = -melf64lriscv
-LD_FLAGS += -T $(WORK_DIR)/script/linker.ld
-#LD_FLAGS += --defsym=_pmem_start=0x80000000 --defsym=_entry_offset=0x0 --gc-sections 
-LD_FLAGS += -e _start
-
-
-$(IMAGE).elf: $(IMAGE).o $(DST_DIR)/am.a $(DST_DIR)/klib.a
-	$(LD) $(LD_FLAGS) -o $@ --start-group $^ --end-group
-
+$(IMAGE).elf: $(OBJS) $(LIBS) 
+	@echo +LD "->" $(IMAGE).elf
+	@$(LD) $(LDFLAGS) -o $@ --start-group $^ --end-group
 
 $(IMAGE).bin: $(IMAGE).elf
-	$(OBJCOPY) -S -O binary $(realpath $<) $@
-	xxd -e -b $@ | sed 's/  .*//' | sed 's/.*: //' > $(IMAGE).txt
-	$(OBJDUMP) -d $^ > $(IMAGE)_dumpelf.txt
+	@$(OBJCOPY) -S -O binary $(realpath $<) $@
+	@xxd -e -b $@ | sed 's/  .*//' | sed 's/.*: //' > $(IMAGE).txt
+	@$(OBJDUMP) -d $^ > $(IMAGE)_dumpelf.txt
 
-$(RUN_FILE):
-	make -C $(CPU_DIR) -f $(CPU_DIR)/Makefile
-
-
-run: $(IMAGE).bin $(RUN_FILE)
-	$(RUN_FILE) --diff=$(CPU_DIR)/riscv64-nemu-interpreter-so --bin=$< "+img_txt=$(IMAGE).txt"
+$(RUNFILE):
+	make -C $(CPUDIR) -f $(CPUDIR)/Makefile $(COMPILE_CPU_FLAGS)
 
 wave:
 	gtkwave wave.vcd -a cpu.gtkw
@@ -132,4 +184,31 @@ readelf:
 
 clean:
 	@rm -rf build Makefile.* .result
-	@rm -rf $(CPU_DIR)/build
+	@rm -rf $(CPUDIR)/build
+
+
+RUN = rungame run
+
+$(RUN): %: $(IMAGE).bin $(RUNFILE)
+	$(RUNFILE) --diff=$(CPUDIR)/riscv64-nemu-interpreter-so --bin=$< "+img_txt=$(IMAGE).txt"
+
+
+RESULT = .result
+
+ALL = $(basename $(notdir $(shell find $(TESTDIR) -name "*.c" -o -name "*.S")))
+
+$(ALL): %:
+	@if make -s NAME=$* run; then \
+		printf "[%14s] $(COLOR_GREEN) PASS!$(COLOR_NONE) \n" $* >> $(RESULT) ; \
+	else \
+		printf "[%14s] $(COLOR_RED) FAIL!$(COLOR_NONE) \n" $* >> $(RESULT) ; \
+	fi
+	-@rm -f Makefile.$*
+
+runall: $(ALL)
+	@cat $(RESULT)
+	@rm $(RESULT)
+
+none:
+	echo $(LIBOBJS)
+

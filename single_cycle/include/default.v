@@ -7,8 +7,4 @@
 
 `define PERIOD 20
 
-`ifndef DIFFTEST
-  `define DIFFTEST
-`endif
-
 `endif

@@ -1,4 +1,3 @@
-WAVE = en
 TOPNAME = top
 
 WORK_DIR = $(shell pwd)
@@ -16,18 +15,26 @@ VSRCS = $(shell find $(VSRC_DIR) -name "*.v")
 CSRC_DIR = $(WORK_DIR)/csrc
 CSRCS = $(shell find $(CSRC_DIR) -name "*.c" -or -name "*.cc" -or -name "*.cpp")
 
-#VC_FLAGS = -O3 -x-initial fast --x-assign fast 
+VC_FLAGS = -O3 -x-initial fast --x-assign fast 
 VC_FLAGS += -cc --MMD -Wall -I$(WORK_DIR)/include
 VC_FLAGS += --exe --build --assert --timing 
+
 ifeq ($(WAVE),en)
   VC_FLAGS += --trace --coverage
+  VC_FLAGS += -D__WAVE__
 endif
+
+ifeq ($(DIFFTEST),en)
+  VC_FLAGS += -D__DIFFTEST__
+  CC_FLAGS += -D__DIFFTEST__
+endif
+
 VC_FLAGS += --Mdir $(OBJ_DIR) -o $(abspath $(BIN))
 
-CC_FLAGS = -Wall -Werror -g -I$(INC_DIR)
+CC_FLAGS += -Wall -Werror -g -I$(INC_DIR)
 LD_FLAGS = -ldl
 
-VERILATOR_FLAGS = $(VC_FLAGS) $(addprefix -CFLAGS , $(CC_FLAGS)) $(addprefix -LDFLAGS , $(LD_FLAGS))
+VERILATOR_FLAGS += $(VC_FLAGS) $(addprefix -CFLAGS , $(CC_FLAGS)) $(addprefix -LDFLAGS , $(LD_FLAGS))
 
 $(BIN):
 	verilator $(VERILATOR_FLAGS) $(VSRCS)  $(CSRCS) \

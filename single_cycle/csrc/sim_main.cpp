@@ -108,7 +108,7 @@ int main(int argc, char** argv, char** env) {
     }
 
 
-#ifdef DIFFTEST
+#ifdef __DIFFTEST__
 
     FILE *fp = fopen(img_bin, "rb");
     assert(fp);
@@ -133,7 +133,7 @@ int main(int argc, char** argv, char** env) {
         
         top->eval();
 
-#ifdef DIFFTEST
+#ifdef __DIFFTEST__
         if( top->diff_rstn == 1 ) {
           resetting = false ;
         }
