@@ -54,7 +54,7 @@ $ /bin/bash setup.sh
   * 设计的信号类型若为wire，则``wire``关键字不可省略，否则编译会报错
   * 设计文档中不得设置``tiemscale``
   * 每一个.v文件必须包含``default.v``头文件
-  一键添加```include default.v"``的方法：在``single_cycle/vsrc/cpu``文件夹下执行命令
+  一键添加``\`include "default.v"``的方法：在``single_cycle/vsrc/cpu``文件夹下执行命令
   ```bash
   $ sed -i '1 i\`include "default.v"' *.v
   ```
