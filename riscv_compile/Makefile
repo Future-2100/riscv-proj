@@ -1,7 +1,7 @@
 .PHONY: clean $(ALL) rom runall run rungame
 
-#ARCH = rv64
-ARCH = rv32
+ARCH = rv64
+#ARCH = rv32
 
 COLOR_RED        = \033[1;31m
 COLOR_GREEN      = \033[1;32m
@@ -11,7 +11,6 @@ COLOR_PEPER      = \033[1;35m
 COLOR_DARK_GREEN = \033[1;36m
 COLOR_WHITE      = \033[1;37m
 COLOR_NONE       = \033[0m
-
 
 ############################## compiler ###############################
 
@@ -48,7 +47,6 @@ LIBDIR  = $(SRCDIR)/libs
 
 
 ############################## objects ###############################
-
 ifeq ($(TEST),en)
   SRCS = $(shell find $(TESTDIR) -name "$(NAME).c" -o -name "$(NAME).S")
 endif

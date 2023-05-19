@@ -58,7 +58,7 @@ $ /bin/bash setup.sh
   ```bash
   $ sed -i '1 i\`include "default.v"' *.v
   ```
-  * 设计的输入输出信号必须与本设计的输入输出信号保持完全一致，见代码``single_cycle/vsrc/cpu/cpu.v``。
+  * 设计的输入输出信号必须与本设计中CPU模块的输入输出信号保持完全一致，详见代码``single_cycle/vsrc/cpu/cpu.v``。
   * 设计内部不得包含存储器和外设模块，对存储器和外设的访问均通过``acs_*``信号，取指通过``pc``和``instr``信号
 ---
 2. `cpu`模块的输入输出信号功能定义:
@@ -84,14 +84,14 @@ ebreak指令在risc-v指令集中表示进入debug模式，本设计没有debug�
 
 在``single_cycle``文件夹下输入命令
 ```bash
-$ make ARCH=rv32 " compile to generate 32-bit CPU
-$ make ARCH=rv64 " compile to generate 64-bit CPU
+$ make ARCH=rv32 # compile to generate 32-bit CPU
+$ make ARCH=rv64 # compile to generate 64-bit CPU
 ```
 即可对设计进行编译,编译后会在``single_cycle/build``文件夹下生成``top``可执行文件。
 
 
 ## difftest功能介绍
-difftest是CPU验证的常用方法，能够快速定位设计中的错误，difftest的模型文件为``single_cycle/riscv64-nemu-interpreter-so``，该模型为一生一芯中不完整的nemu模型，可用于验证RV64G指令集。
+difftest是CPU验证的常用方法，能够快速定位设计中的错误，difftest的模型文件为``single_cycle/riscv64-nemu-interpreter-so``，该模型为一生一芯中整的nemu模型，但并不完整,仅仅可用于验证RV64G指令集。
 
 若想关闭difftest功能，则在``riscv_compile/Makefile:127``文件中将``COMPILE_CPU_FLAGS += DIFFTEST=en``注释掉。
 
@@ -101,7 +101,7 @@ difftest是CPU验证的常用方法，能够快速定位设计中的错误，dif
 # 3. riscv\_compile
 ``riscv_compile``用于将C语言程序编译成risc-v指令集的程序，编译生成的程序文件用于在单周期CPU中运行。
 
-``riscv_compile/Makefile:3``中的变量``ARCH``用于设置编译选项，若``ARCH = rv32``，则会编译出32位CPU运行的程序，若``ARCH = rv64``，则会编译出64位CPU运行的程序。**目前32位CPU暂时不支持difftest**
+``riscv_compile/Makefile:3``中的变量``ARCH``用于设置编译选项，若``ARCH = rv32``，则会编译出32位CPU运行的程序，若``ARCH = rv64``，则会编译出64位CPU运行的程序。**目前32位CPU暂时不支持difftest**，因此若运行32位CPU的程序，则需手动关闭difftest功能。
 
 ``riscv_compile/src/tests``文件夹下包含了33个测试程序,用于验证单周期CPU的正确性
 
