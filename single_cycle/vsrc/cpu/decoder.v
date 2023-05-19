@@ -4,7 +4,7 @@ module decoder(
 
   input   wire    [31:0]    instr   ,
 
-  output  wire    [63:0]    imm     ,
+  output  wire    [`XLEN-1:0]    imm     ,
 
   output  wire              lui     ,
   output  wire              auipc   ,
@@ -22,15 +22,12 @@ module decoder(
   output  wire              lb      ,
   output  wire              lh      ,
   output  wire              lw      ,
-  output  wire              ld      ,
   output  wire              lbu     ,
   output  wire              lhu     ,
-  output  wire              lwu     ,
 
   output  wire              sb      ,
   output  wire              sh      ,
   output  wire              sw      ,
-  output  wire              sd      ,
 
   output  wire              addi    ,
   output  wire              slti    ,
@@ -53,16 +50,6 @@ module decoder(
   output  wire              or_     ,
   output  wire              and_    ,
 
-  output  wire              addiw   ,
-  output  wire              slliw   ,
-  output  wire              srliw   ,
-  output  wire              sraiw   ,
-  output  wire              addw    ,
-  output  wire              subw    ,
-  output  wire              sllw    ,
-  output  wire              srlw    ,
-  output  wire              sraw    ,
-
   output  wire              mul     ,
   output  wire              mulh    ,
   output  wire              mulhsu  ,
@@ -72,11 +59,25 @@ module decoder(
   output  wire              rem     ,
   output  wire              remu    ,
 
+`ifdef __RV64__
+  output  wire              addiw   ,
+  output  wire              slliw   ,
+  output  wire              srliw   ,
+  output  wire              sraiw   ,
+  output  wire              addw    ,
+  output  wire              subw    ,
+  output  wire              sllw    ,
+  output  wire              srlw    ,
+  output  wire              sraw    ,
+  output  wire              ld      ,
+  output  wire              lwu     ,
+  output  wire              sd      ,
   output  wire              mulw    ,
   output  wire              divw    ,
   output  wire              divuw   ,
   output  wire              remw    ,
   output  wire              remuw   ,
+`endif
 
   output  wire              ebreak   
 );
@@ -130,10 +131,12 @@ wire  branch = opcode_6_5__11 & opcode_4_2__000 & opcode_1_0__11 ;
 wire  load   = opcode_6_5__00 & opcode_4_2__000 & opcode_1_0__11 ;
 wire  store  = opcode_6_5__01 & opcode_4_2__000 & opcode_1_0__11 ;
 wire  arithi = opcode_6_5__00 & opcode_4_2__100 & opcode_1_0__11 ;
-wire  arithiw= opcode_6_5__00 & opcode_4_2__110 & opcode_1_0__11 ;
 wire  arith  = opcode_6_5__01 & opcode_4_2__100 & opcode_1_0__11 ;
-wire  arithw = opcode_6_5__01 & opcode_4_2__110 & opcode_1_0__11 ;
 wire  system = opcode_6_5__11 & opcode_4_2__100 & opcode_1_0__11 ;
+`ifdef __RV64__
+wire  arithw = opcode_6_5__01 & opcode_4_2__110 & opcode_1_0__11 ;
+wire  arithiw= opcode_6_5__00 & opcode_4_2__110 & opcode_1_0__11 ;
+`endif
 
 assign beq  = branch & funct3__000;
 assign bne  = branch & funct3__001;
@@ -145,15 +148,17 @@ assign bgeu = branch & funct3__111;
 assign  lb  = load & funct3__000 ;
 assign  lh  = load & funct3__001 ;
 assign  lw  = load & funct3__010 ;
-assign  ld  = load & funct3__011 ;
 assign  lbu = load & funct3__100 ;
 assign  lhu = load & funct3__101 ;
-assign  lwu = load & funct3__110 ;
 
 assign  sb  = store & funct3__000 ;
 assign  sh  = store & funct3__001 ;
 assign  sw  = store & funct3__010 ;
+`ifdef __RV64__
 assign  sd  = store & funct3__011 ;
+assign  ld  = load & funct3__011 ;
+assign  lwu = load & funct3__110 ;
+`endif
 
 assign addi =  arithi & funct3__000 ;
 assign slti  = arithi & funct3__010 ;
@@ -176,6 +181,7 @@ assign sra   = arith  & funct3__101 & funct7__0100000 ;
 assign or_   = arith  & funct3__110 & funct7__0000000 ;
 assign and_  = arith  & funct3__111 & funct7__0000000 ;
 
+`ifdef __RV64__
 assign addiw = arithiw & funct3__000 ;
 assign slliw = arithiw & funct3__001 & funct7__0000000 ;
 assign srliw = arithiw & funct3__101 & funct7__0000000 ;
@@ -186,6 +192,7 @@ assign subw  = arithw & funct3__000 & funct7__0100000 ;
 assign sllw  = arithw & funct3__001 & funct7__0000000 ;
 assign srlw  = arithw & funct3__101 & funct7__0000000 ;
 assign sraw  = arithw & funct3__101 & funct7__0100000 ;
+`endif
 
 assign mul   = arith & funct3__000 & funct7__0000001 ;
 assign mulh  = arith & funct3__001 & funct7__0000001 ;
@@ -196,18 +203,25 @@ assign divu  = arith & funct3__101 & funct7__0000001 ;
 assign rem   = arith & funct3__110 & funct7__0000001 ; 
 assign remu  = arith & funct3__111 & funct7__0000001 ; 
 
+`ifdef __RV64__
 assign mulw  = arithw & funct3__000 & funct7__0000001 ; 
 assign divw  = arithw & funct3__100 & funct7__0000001 ; 
 assign divuw = arithw & funct3__101 & funct7__0000001 ; 
 assign remw  = arithw & funct3__110 & funct7__0000001 ; 
 assign remuw = arithw & funct3__111 & funct7__0000001 ; 
+`endif
       
 assign ebreak = system & funct3__000 & funct7__0000000 & 
                 (instr[24:20]==5'b1) & (instr[19:15]==5'b0) & 
                 (instr[11:7] ==5'b0) ;
 
 
-wire  I_type = load | jalr | arithi | arithiw;
+wire  I_type =   load | jalr | arithi 
+`ifdef __RV64__
+               | arithiw
+`endif
+               ;
+
 wire  S_type = store  ;
 wire  B_type = branch ;
 wire  U_type = lui | auipc ;
@@ -232,9 +246,24 @@ wire  [7:0]  imm_19_12 = ( {8{I_type | S_type | B_type}} & {8{instr[31]}} ) |
 wire  [10:0] imm_30_20 = ( {11{I_type | S_type | B_type | J_type }} & {11{instr[31]}} ) | 
                          ( {11{U_type}} & instr[30:20] ) ;
 
-wire  [32:0] imm_63_31 = {33{instr[31]}} ;
+wire   imm_31 = instr[31] ;
 
-assign imm = { imm_63_31, imm_30_20, imm_19_12, imm_11, imm_10_5, imm_4_1, imm_0 } ;
+`ifdef __RV64__
+  wire  [31:0] imm_63_32 = {32{instr[31]}} ;
+`endif
+
+assign imm = { 
+  `ifdef __RV64__
+    imm_63_32, 
+  `endif
+    imm_31, 
+    imm_30_20, 
+    imm_19_12, 
+    imm_11, 
+    imm_10_5, 
+    imm_4_1, 
+    imm_0 
+  } ;
 
 endmodule
 

@@ -4,21 +4,21 @@ module cpu(
   input  wire          clk         ,
   input  wire          rstn        ,
 
-  output wire  [63:0]  pc          ,
-  input  wire  [31:0]  instr       ,
+  output wire  [`XLEN-1:0]  pc          ,
+  input  wire  [31:0]       instr       ,
 
-  output wire          acs_en      ,
-  output wire          acs_wr      ,
-  output wire  [7:0]   acs_bytes   ,
-  output wire  [63:0]  acs_addr    ,  
-  output wire  [63:0]  acs_wdata   ,
-  input  wire  [63:0]  acs_rdata   ,
-  output wire          ebreak      
+  output wire               acs_en      ,
+  output wire               acs_wr      ,
+  output wire  [`XLEN/8-1:0]acs_bytes   ,
+  output wire  [`XLEN-1:0]  acs_addr    ,  
+  output wire  [`XLEN-1:0]  acs_wdata   ,
+  input  wire  [`XLEN-1:0]  acs_rdata   ,
+  output wire               ebreak      
 
 );
 
-wire [63:0]  jump_pc ;
-wire         jump_en ;
+wire [`XLEN-1:0]  jump_pc ;
+wire              jump_en ;
 
 pc_gen pc_gen_inst(
   .clk     ( clk     )  ,
@@ -28,7 +28,7 @@ pc_gen pc_gen_inst(
   .pc      ( pc      )  
 );
 
-  wire    [63:0]    imm     ;
+  wire    [`XLEN-1:0]    imm     ;
   wire              lui     ;
   wire              auipc   ;
   wire              jal     ;
@@ -42,14 +42,11 @@ pc_gen pc_gen_inst(
   wire              lb      ;
   wire              lh      ;
   wire              lw      ;
-  wire              ld      ;
   wire              lbu     ;
   wire              lhu     ;
-  wire              lwu     ;
   wire              sb      ;
   wire              sh      ;
   wire              sw      ;
-  wire              sd      ;
   wire              addi    ;
   wire              slti    ;
   wire              sltiu   ;
@@ -69,6 +66,18 @@ pc_gen pc_gen_inst(
   wire              sra     ;
   wire              or_     ;
   wire              and_    ;
+  wire              mul     ;
+  wire              mulh    ;
+  wire              mulhsu  ;
+  wire              mulhu   ;
+  wire              div     ;
+  wire              divu    ;
+  wire              rem     ;
+  wire              remu    ;
+`ifdef __RV64__
+  wire              sd      ;
+  wire              lwu     ;
+  wire              ld      ;
   wire              addiw   ;
   wire              slliw   ;
   wire              srliw   ;
@@ -78,19 +87,12 @@ pc_gen pc_gen_inst(
   wire              sllw    ;
   wire              srlw    ;
   wire              sraw    ;
-  wire              mul     ;
-  wire              mulh    ;
-  wire              mulhsu  ;
-  wire              mulhu   ;
-  wire              div     ;
-  wire              divu    ;
-  wire              rem     ;
-  wire              remu    ;
   wire              mulw    ;
   wire              divw    ;
   wire              divuw   ;
   wire              remw    ;
   wire              remuw   ;
+`endif
 
 decoder decoder_inst(
   .instr  ( instr  ) ,
@@ -108,14 +110,11 @@ decoder decoder_inst(
   .lb     ( lb     ) ,
   .lh     ( lh     ) ,
   .lw     ( lw     ) ,
-  .ld     ( ld     ) ,
   .lbu    ( lbu    ) ,
   .lhu    ( lhu    ) ,
-  .lwu    ( lwu    ) ,
   .sb     ( sb     ) ,
   .sh     ( sh     ) ,
   .sw     ( sw     ) ,
-  .sd     ( sd     ) ,
   .addi   ( addi   ) ,
   .slti   ( slti   ) ,
   .sltiu  ( sltiu  ) ,
@@ -135,6 +134,18 @@ decoder decoder_inst(
   .sra    ( sra    ) ,
   .or_    ( or_    ) ,
   .and_   ( and_   ) ,
+  .mul    ( mul    ) ,
+  .mulh   ( mulh   ) ,
+  .mulhsu ( mulhsu ) ,
+  .mulhu  ( mulhu  ) ,
+  .div    ( div    ) ,
+  .divu   ( divu   ) ,
+  .rem    ( rem    ) ,
+  .remu   ( remu   ) ,
+`ifdef __RV64__
+  .sd     ( sd     ) ,
+  .lwu    ( lwu    ) ,
+  .ld     ( ld     ) ,
   .addiw  ( addiw  ) ,
   .slliw  ( slliw  ) ,
   .srliw  ( srliw  ) ,
@@ -144,29 +155,22 @@ decoder decoder_inst(
   .sllw   ( sllw   ) ,
   .srlw   ( srlw   ) ,
   .sraw   ( sraw   ) ,
-  .mul    ( mul    ) ,
-  .mulh   ( mulh   ) ,
-  .mulhsu ( mulhsu ) ,
-  .mulhu  ( mulhu  ) ,
-  .div    ( div    ) ,
-  .divu   ( divu   ) ,
-  .rem    ( rem    ) ,
-  .remu   ( remu   ) ,
   .mulw   ( mulw   ) ,
   .divw   ( divw   ) ,
   .divuw  ( divuw  ) ,
   .remw   ( remw   ) ,
   .remuw  ( remuw  ) ,
+`endif
   .ebreak ( ebreak )  
 );
 
 
-wire  [63:0]  data_imm = imm ;
-wire  [63:0]  data_rs1  ;
-wire  [63:0]  data_rs2  ;
+wire  [`XLEN-1:0]  data_imm = imm ;
+wire  [`XLEN-1:0]  data_rs1  ;
+wire  [`XLEN-1:0]  data_rs2  ;
 
 wire  wb_en ;
-wire  [63:0]  wb_data ;
+wire  [`XLEN-1:0]  wb_data ;
 
 exu exu_inst(
   .pc        ( pc        )  ,
@@ -194,15 +198,6 @@ exu exu_inst(
   .sra       ( sra       )  ,
   .or_       ( or_       )  ,
   .and_      ( and_      )  ,
-  .addiw     ( addiw     )  ,
-  .slliw     ( slliw     )  ,
-  .srliw     ( srliw     )  ,
-  .sraiw     ( sraiw     )  ,
-  .addw      ( addw      )  ,
-  .subw      ( subw      )  ,
-  .sllw      ( sllw      )  ,
-  .srlw      ( srlw      )  ,
-  .sraw      ( sraw      )  ,
   .mul       ( mul       )  ,
   .mulh      ( mulh      )  ,
   .mulhsu    ( mulhsu    )  ,
@@ -211,11 +206,6 @@ exu exu_inst(
   .divu      ( divu      )  ,
   .rem       ( rem       )  ,
   .remu      ( remu      )  ,
-  .mulw      ( mulw      )  ,
-  .divw      ( divw      )  ,
-  .divuw     ( divuw     )  ,
-  .remw      ( remw      )  ,
-  .remuw     ( remuw     )  ,
   .beq       ( beq       )  ,
   .bne       ( bne       )  ,
   .blt       ( blt       )  ,
@@ -227,14 +217,30 @@ exu exu_inst(
   .lb        ( lb        )  ,
   .lh        ( lh        )  ,
   .lw        ( lw        )  ,
-  .ld        ( ld        )  ,
   .lbu       ( lbu       )  ,
   .lhu       ( lhu       )  ,
-  .lwu       ( lwu       )  ,
   .sb        ( sb        )  ,
   .sh        ( sh        )  ,
   .sw        ( sw        )  ,
+`ifdef __RV64__
+  .mulw      ( mulw      )  ,
+  .divw      ( divw      )  ,
+  .divuw     ( divuw     )  ,
+  .remw      ( remw      )  ,
+  .remuw     ( remuw     )  ,
+  .addiw     ( addiw     )  ,
+  .slliw     ( slliw     )  ,
+  .srliw     ( srliw     )  ,
+  .sraiw     ( sraiw     )  ,
+  .addw      ( addw      )  ,
+  .subw      ( subw      )  ,
+  .sllw      ( sllw      )  ,
+  .srlw      ( srlw      )  ,
+  .sraw      ( sraw      )  ,
+  .lwu       ( lwu       )  ,
+  .ld        ( ld        )  ,
   .sd        ( sd        )  ,
+`endif
   .wb_en     ( wb_en     )  ,
   .wb_data   ( wb_data   )  ,
   .jump_en   ( jump_en   )  ,

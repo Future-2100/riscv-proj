@@ -73,14 +73,14 @@ static int parse_args(int argc, char *argv[]) {
 }
 
 
-uint64_t *cpu_gpr = NULL;
+uintptr_t *cpu_gpr = NULL;
 extern "C" void set_gpr_ptr(const svOpenArrayHandle r){
-  cpu_gpr = (uint64_t *)(((VerilatedDpiOpenVar*)r)->datap());
+  cpu_gpr = (uintptr_t *)(((VerilatedDpiOpenVar*)r)->datap());
 }
 
-uint64_t *cpu_pc= NULL;
+uintptr_t *cpu_pc= NULL;
 extern "C" void set_pc(const svOpenArrayHandle r){
-  cpu_pc = (uint64_t *)(((VerilatedDpiOpenVar*)r)->datap());
+  cpu_pc = (uintptr_t *)(((VerilatedDpiOpenVar*)r)->datap());
 }
 
 
@@ -153,7 +153,7 @@ int main(int argc, char** argv, char** env) {
               printf(COLOR_NONE);
 
               //  if difftest check has not passed, let cpu continue three clock cycle and then finish the simulation .
-              for(int i=0; i<30; i++){
+              for(int i=0; i<40; i++){
                 contextp->timeInc(1);
               }
               top->final();

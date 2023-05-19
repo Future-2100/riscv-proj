@@ -1,5 +1,7 @@
 TOPNAME = top
 
+#ARCH = rv32
+
 WORK_DIR = $(shell pwd)
 BUILD_DIR = $(WORK_DIR)/build
 OBJ_DIR = $(BUILD_DIR)/obj_dir
@@ -27,6 +29,16 @@ endif
 ifeq ($(DIFFTEST),en)
   VC_FLAGS += -D__DIFFTEST__
   CC_FLAGS += -D__DIFFTEST__
+endif
+
+ifeq ($(ARCH), rv64)
+	VC_FLAGS += -DXLEN=64
+	VC_FLAGS += -D__RV64__
+else
+  ifeq ($(ARCH), rv32)
+  	VC_FLAGS += -DXLEN=32
+	VC_FLAGS += -D__RV32__
+  endif
 endif
 
 VC_FLAGS += --Mdir $(OBJ_DIR) -o $(abspath $(BIN))

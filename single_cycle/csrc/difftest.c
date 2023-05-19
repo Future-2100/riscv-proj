@@ -12,7 +12,7 @@ const char *regs[] = {
   "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
 };
 
-extern uint64_t *cpu_gpr;
+extern uintptr_t *cpu_gpr;
 
 static CPU_state ref_r;
 

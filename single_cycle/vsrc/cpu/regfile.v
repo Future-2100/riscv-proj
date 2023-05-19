@@ -1,15 +1,15 @@
 `include "default.v"
 
 module regfile (
-  input   wire              wen       ,
-  input   wire    [4:0]     index_rd  ,
-  input   wire    [63:0]    data_rd   ,
+  input   wire                   wen       ,
+  input   wire    [4:0]          index_rd  ,
+  input   wire    [`XLEN-1:0]    data_rd   ,
 
-  input   wire    [4:0]     index_rs1 ,
-  output  wire    [63:0]    data_rs1  ,
+  input   wire    [4:0]          index_rs1 ,
+  output  wire    [`XLEN-1:0]    data_rs1  ,
 
-  input   wire    [4:0]     index_rs2 ,
-  output  wire    [63:0]    data_rs2  ,
+  input   wire    [4:0]          index_rs2 ,
+  output  wire    [`XLEN-1:0]    data_rs2  ,
 
   input   wire              clk       ,
   input   wire              rstn      
@@ -17,7 +17,7 @@ module regfile (
 
   //wire  clkn = ~clk;
 
-  wire  [63:0]  gpr  [31:0]  ;
+  wire  [`XLEN-1:0]  gpr  [31:0]  ;
   wire  [31:0]  gpr_wen      ;
 
   genvar i;
@@ -26,10 +26,10 @@ module regfile (
 
       if(i==0) begin
         assign gpr_wen[i] = 1'b0;
-        assign gpr[i] = 64'b0;
+        assign gpr[i] = `XLEN'b0;
       end else begin
         assign gpr_wen[i] = wen & (index_rd == i);
-        dff #(64) gpr_dff(clk, rstn, gpr_wen[i], data_rd, gpr[i]);
+        dff #(`XLEN) gpr_dff(clk, rstn, gpr_wen[i], data_rd, gpr[i]);
       end
 
     end

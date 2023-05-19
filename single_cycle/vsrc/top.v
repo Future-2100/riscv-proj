@@ -5,18 +5,18 @@ module top(
   output    wire   diff_rstn   
 );
 
-  reg          clk         ;
-  reg          rstn        ;
-  wire [31:0]  instr       ;
-  wire         acs_en      ;
-  wire         acs_wr      ;
-  wire [7:0]   acs_bytes   ;
-  wire [63:0]  acs_addr    ;  
-  wire [63:0]  acs_wdata   ;
-  wire [63:0]  acs_rdata   ; 
-  wire         acs_error   ;
-  wire [63:0]  pc          ;
-  wire         ebreak      ;
+  reg               clk         ;
+  reg               rstn        ;
+  wire [31:0]       instr       ;
+  wire              acs_en      ;
+  wire              acs_wr      ;
+  wire [`XLEN/8-1:0]acs_bytes   ;
+  wire [`XLEN-1:0]  acs_addr    ;  
+  wire [`XLEN-1:0]  acs_wdata   ;
+  wire [`XLEN-1:0]  acs_rdata   ; 
+  wire              acs_error   ;
+  wire [`XLEN-1:0]  pc          ;
+  wire              ebreak      ;
 
 
   assign diff_rstn = rstn;
@@ -87,27 +87,32 @@ bus bus_inst (
 );
 
 
-  wire          mmy_cen     ;
-  wire          mmy_wr      ;
-  wire  [7:0]   mmy_strb    ;
-  wire  [26:0]  mmy_addr    ;
-  wire  [63:0]  mmy_wdata   ;
-  wire  [63:0]  mmy_rdata   ;
-  wire          mmy_error   ;
+  wire                 mmy_cen     ;
+  wire                 mmy_wr      ;
+  wire  [`XLEN/8-1:0]  mmy_strb    ;
+  wire  [26:0]         mmy_addr    ;
+  wire  [`XLEN-1:0]    mmy_wdata   ;
+  wire  [`XLEN-1:0]    mmy_rdata   ;
+  wire                 mmy_error   ;
 
   wire          uart_cen    ;
   wire          uart_wr     ;
   wire  [7:0]   uart_wdata  ;
   wire          uart_error  ;
 
-  wire          timer_cen   ;
-  wire          timer_wr    ;
-  wire  [63:0]  timer_rdata ;
-  wire          timer_error ;
+  wire               timer_cen   ;
+  wire               timer_wr    ;
+  wire  [`XLEN-1:0]  timer_rdata ;
+  wire               timer_error ;
 
-  //wire  mmy_icen = (pc[63:32]==32'b0) && (pc[31:27]==5'b1000_0) ;
+  //wire  mmy_icen = (pc[`XLEN-1:32]==32'b0) && (pc[31:27]==5'b1000_0) ;
   
-  wire  pc_error = (pc[63:32] != 32'b0) && (pc[63:32] != 32'hffff_ffff) ;
+  `ifdef __RV64__
+    wire  pc_error = (pc[`XLEN-1:32] != 32'b0) && (pc[`XLEN-1:32] != 32'hffff_ffff) ;
+  `else
+    wire  pc_error = 1'b0;
+  `endif
+
   wire  mmy_icen =  (pc[31:27]==5'b1000_0) && !pc_error ;
   wire  [26:0]  mmy_iaddr = pc[26:0] ;
 
@@ -149,7 +154,7 @@ timer timer_inst(
 
   always@(posedge clk) begin
     if(ebreak) begin
-      if( cpu_inst.regfile_inst.gpr[10] == 64'b0)
+      if( cpu_inst.regfile_inst.gpr[10] == `XLEN'b0)
         $display("\033[1;32mSUCCESS at %0tns\033[0m", $time);
       else
         $display("\033[1;31mFAIL\033[1;31m");
@@ -164,21 +169,24 @@ timer timer_inst(
     end
   end:access_error
 
-  import "DPI-C" function void set_gpr_ptr(input logic [63:0] a []);
+  import "DPI-C" function void set_gpr_ptr(input logic [`XLEN-1:0] a []);
   initial set_gpr_ptr(cpu_inst.regfile_inst.gpr);
 
-  import "DPI-C" function void set_pc(input logic [63:0] b[]);
+  import "DPI-C" function void set_pc(input logic [`XLEN-1:0] b[]);
   initial set_pc(pc);
 
 
-  wire  _unused_ok = & { 1'b0,
-                         cpu_inst.regfile_inst.gpr_wen,
-                         cpu_inst.exu_inst.productu,
-                         cpu_inst.exu_inst.productsu,
-                         cpu_inst.exu_inst.productw,
-                         cpu_inst.decoder_inst.opcode_4_2__010,
-                         cpu_inst.decoder_inst.opcode_4_2__111,
-                         cpu_inst.decoder_inst.opcode_6_5__10  
+  wire  _unused_ok = & { 1'b0
+                         , cpu_inst.decoder_inst.opcode_4_2__010
+                         , cpu_inst.decoder_inst.opcode_4_2__111
+                         , cpu_inst.decoder_inst.opcode_4_2__110
+                         , cpu_inst.decoder_inst.opcode_6_5__10  
+                         , cpu_inst.regfile_inst.gpr_wen
+                         , cpu_inst.exu_inst.productu
+                         , cpu_inst.exu_inst.productsu
+                       `ifdef __RV64__
+                         , cpu_inst.exu_inst.productw
+                       `endif
                        };
 
   string img_file ;

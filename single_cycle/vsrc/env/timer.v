@@ -6,20 +6,20 @@ module timer(
 
   input   wire            cen    ,
   input   wire            wr     ,
-  output  wire    [63:0]  rdata  ,
+  output  wire [`XLEN-1:0]rdata  ,
   output  wire            error   
 );
 
 
-reg  [63:0]  counter;
+reg  [`XLEN-1:0]  counter;
 always@(posedge clk) begin
   if(!rstn)
-    counter <= 64'b0;
+    counter <= `XLEN'b0;
   else
     counter <= counter + 1'b1;
 end
 
-assign rdata = (cen && !wr) ? counter : 64'b0 ;
+assign rdata = (cen && !wr) ? counter : `XLEN'b0 ;
 assign error =  cen &&  wr ;
 
 endmodule
