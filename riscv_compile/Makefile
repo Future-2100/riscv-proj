@@ -49,16 +49,9 @@ GAME_SRC = $(shell find -L $(GAMEDIR)/src/ -name "*.c" -o -name "*.cpp")
 GAMEINC = $(sort $(dir $(shell find $(GAMEDIR) -name "*.h")))
 INCDIR += $(GAMEINC)
 
-SRCS = $(GAME_SRC) $(ROM_SRC)
+SRCS = $(ROM_SRC) $(GAME_SRC) 
 
 CFLAGS += -DPSS_STYLE=1 -DPRAMESKIP -D__NO_FILE_SYSTEM__
-CFLAGS += -D__ISA__=\"riscv64\"
-CFLAGS += -D__ISA_RISCV64__
-CFLAGS += -D__ARCH__=riscv64-npc
-CFLAGS += -D__ARCH_RISCV64_NPC
-CFLAGS += -D__PLATFORM__=npc
-CFLAGS += -D__PLATFORM_NPC
-CFLAGS += -DARCH_H=\"arch/riscv64-nemu.h\"
 
 rom:
 	@-cd $(ROM_PATH) && python3 build-roms.py
