@@ -1,6 +1,6 @@
 RISC-V单周期CPU
 ===============
-这是一个RISC-V单周期CPU的设计和仿真项目，支持RV32IM以及RV64IM，包含了两个模块：
+这是一个RISC-V单周期CPU的设计和仿真项目，支持32位和64位，包含了两个模块：
 * 单周期CPU的RTL设计文档，在``single_cycle``文件夹下
 * 提供给CPU运行的测试程序，在``riscv_compile``文件夹下
 
