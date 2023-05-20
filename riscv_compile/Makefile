@@ -120,7 +120,6 @@ CXXFLAGS += $(CFLAGS) -ffreestanding -fno-rtti -fno-exceptions -DMAINARGS=\"mari
 CXXFLAGS += -D__CPP__
 
 LDFLAGS += -T $(WORKDIR)/script/linker.ld
-#LDFLAGS += --defsym=_pmem_start=0x80000000 --defsym=_entry_offset=0x0 
 LDFLAGS += --gc-sections 
 LDFLAGS += -e _start
 
@@ -166,11 +165,6 @@ $(IMAGE).bin: $(IMAGE).elf
 $(RUNFILE):
 	@echo +VERILATOR "->" top
 	make -C $(CPUDIR) -f $(CPUDIR)/Makefile $(COMPILE_CPU_FLAGS) ARCH=$(ARCH)
-
-
-#RUN = run
-#$(RUN): %: $(IMAGE).bin $(RUNFILE)
-#	$(RUNFILE) --diff=$(CPUDIR)/riscv64-nemu-interpreter-so --bin=$< "+img_txt=$(IMAGE).txt"
 
 
 ifeq ($(ARCH),rv32)

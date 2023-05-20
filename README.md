@@ -85,7 +85,7 @@ ebreak指令在risc-v指令集中表示进入debug模式，本设计没有debug�
 ## difftest功能介绍
 difftest是CPU验证的常用方法，能够快速定位设计中的错误，difftest的模型文件为``single_cycle/riscv64-nemu-interpreter-so``，该模型为一生一芯中整的nemu模型，但并不完整,仅仅可用于验证RV64G指令集。
 
-若想关闭difftest功能，则在``riscv_compile/Makefile:127``文件中将``COMPILE_CPU_FLAGS += DIFFTEST=en``注释掉。
+若想关闭difftest功能，则在``riscv_compile/Makefile:128``文件中将``COMPILE_CPU_FLAGS += DIFFTEST=en``注释掉。
 
 **注意: 若运行的测试程序需要对串口或定时器进行访问，则必须关掉difftest再编译仿真，否则difftest必然会报错并终止仿真**
 
