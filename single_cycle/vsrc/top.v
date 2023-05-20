@@ -197,7 +197,8 @@ timer timer_inst(
     end
 `ifdef __WAVE__
     $dumpfile("wave.vcd");
-    $dumpvars(0, tb);
+    $dumpvars();
+    //$dumpvars(0, tb);
 `endif
   end
 

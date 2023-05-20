@@ -1,14 +1,17 @@
 TOPNAME = top
 
-#ARCH = rv32
-
 WORK_DIR = $(shell pwd)
 BUILD_DIR = $(WORK_DIR)/build
 OBJ_DIR = $(BUILD_DIR)/obj_dir
 BIN = $(BUILD_DIR)/$(TOPNAME)
 INC_DIR = $(WORK_DIR)/include
 
+
 default: $(BIN)
+
+ifeq ($(ARCH),)
+	$(error $$ARCH must be "rv32" or "rv64")
+endif
 
 $(shell mkdir -p $(BUILD_DIR))
 
@@ -17,7 +20,7 @@ VSRCS = $(shell find $(VSRC_DIR) -name "*.v")
 CSRC_DIR = $(WORK_DIR)/csrc
 CSRCS = $(shell find $(CSRC_DIR) -name "*.c" -or -name "*.cc" -or -name "*.cpp")
 
-VC_FLAGS = -O3 -x-initial fast --x-assign fast 
+#VC_FLAGS = -O3 -x-initial fast --x-assign fast 
 VC_FLAGS += -cc --MMD -Wall -I$(WORK_DIR)/include
 VC_FLAGS += --exe --build --assert --timing 
 
@@ -34,10 +37,12 @@ endif
 ifeq ($(ARCH), rv64)
 	VC_FLAGS += -DXLEN=64
 	VC_FLAGS += -D__RV64__
+	CC_FLAGS += -D__RV64__
 else
   ifeq ($(ARCH), rv32)
   	VC_FLAGS += -DXLEN=32
-	VC_FLAGS += -D__RV32__
+	  VC_FLAGS += -D__RV32__
+	  CC_FLAGS += -D__RV32__
   endif
 endif
 

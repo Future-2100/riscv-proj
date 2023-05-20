@@ -37,7 +37,7 @@ static char *valueplusargs = NULL;
 
 
 void init_difftest(char *ref_so_file, long img_size, int port, uint8_t *pmem);
-bool difftest_step(uint64_t pc);
+bool difftest_step(xlen_t pc);
 
 
 static int parse_args(int argc, char *argv[]) {
@@ -73,14 +73,14 @@ static int parse_args(int argc, char *argv[]) {
 }
 
 
-uintptr_t *cpu_gpr = NULL;
+xlen_t *cpu_gpr = NULL;
 extern "C" void set_gpr_ptr(const svOpenArrayHandle r){
-  cpu_gpr = (uintptr_t *)(((VerilatedDpiOpenVar*)r)->datap());
+  cpu_gpr = (xlen_t *)(((VerilatedDpiOpenVar*)r)->datap());
 }
 
-uintptr_t *cpu_pc= NULL;
+xlen_t *cpu_pc= NULL;
 extern "C" void set_pc(const svOpenArrayHandle r){
-  cpu_pc = (uintptr_t *)(((VerilatedDpiOpenVar*)r)->datap());
+  cpu_pc = (xlen_t *)(((VerilatedDpiOpenVar*)r)->datap());
 }
 
 
@@ -149,12 +149,13 @@ int main(int argc, char** argv, char** env) {
             if( difftest_step(*cpu_pc) == false) {
               printf(COLOR_GREEN);
               printf("time : %ld\n",contextp->time());
-              printf("npc pc = 0x%lx\n", *cpu_pc);
+              printf("npc pc = 0x%lx\n", (uint64_t)*cpu_pc);
               printf(COLOR_NONE);
 
-              //  if difftest check has not passed, let cpu continue three clock cycle and then finish the simulation .
-              for(int i=0; i<40; i++){
+              //  if difftest check has not passed, let cpu continue one clock cycle and then finish the simulation .
+              for(int i=0; i<20; i++){
                 contextp->timeInc(1);
+                top->eval();
               }
               top->final();
               delete top;

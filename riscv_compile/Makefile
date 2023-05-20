@@ -1,8 +1,5 @@
 .PHONY: clean $(ALL) rom runall run rungame
 
-ARCH = rv64
-#ARCH = rv32
-
 COLOR_RED        = \033[1;31m
 COLOR_GREEN      = \033[1;32m
 COLOR_YELLOW     = \033[1;33m
@@ -12,15 +9,22 @@ COLOR_DARK_GREEN = \033[1;36m
 COLOR_WHITE      = \033[1;37m
 COLOR_NONE       = \033[0m
 
+default: $(IMAGE).bin
+
 ############################## compiler ###############################
+
+ifeq ($(ARCH),)
+	$(info No value specified for $$ARCH, so defaults to "rv32")
+  ARCH = rv32
+endif
 
 ifeq ($(ARCH), rv64)
 CROSS_COMPILE = riscv64-linux-gnu
 endif
 
 ifeq ($(ARCH), rv32)
-#CROSS_COMPILE = riscv32-unknown-linux-gnu
-CROSS_COMPILE = riscv64-linux-gnu
+CROSS_COMPILE = riscv32-unknown-linux-gnu
+#CROSS_COMPILE = riscv64-linux-gnu
 endif
 
 AS = $(CROSS_COMPILE)-gcc
@@ -86,8 +90,6 @@ LINKAGE = $(OBJS) $(LIBS)
 CPUDIR = $(WORKDIR)/../single_cycle
 RUNFILE = $(CPUDIR)/build/top
 
-default: $(IMAGE).bin
-
 
 ############################## flags ###############################
 ASFLAGS = -fno-pic -mcmodel=medany -mstrict-align -MMD
@@ -124,7 +126,7 @@ LDFLAGS += -e _start
 
 ifeq ($(TEST), en)
   COMPILE_CPU_FLAGS += WAVE=en
-  #COMPILE_CPU_FLAGS += DIFFTEST=en
+  COMPILE_CPU_FLAGS += DIFFTEST=en
 endif
 
 ifeq ($(GAME), en)
@@ -170,9 +172,19 @@ $(RUNFILE):
 #$(RUN): %: $(IMAGE).bin $(RUNFILE)
 #	$(RUNFILE) --diff=$(CPUDIR)/riscv64-nemu-interpreter-so --bin=$< "+img_txt=$(IMAGE).txt"
 
+
+ifeq ($(ARCH),rv32)
+  DIFFFILE = difftest/riscv32-nemu-interpreter-so
+else
+  ifeq ($(ARCH),rv64)
+    DIFFFILE = difftest/riscv64-nemu-interpreter-so
+  endif
+endif
+
+
 run: $(IMAGE).bin $(RUNFILE)
 	@echo "----------------------RUNNING------------------------------"
-	$(RUNFILE) --diff=$(CPUDIR)/riscv64-nemu-interpreter-so --bin=$< "+img_txt=$(IMAGE).txt"
+	$(RUNFILE) --diff=$(CPUDIR)/$(DIFFFILE) --bin=$< "+img_txt=$(IMAGE).txt"
 	@echo "----------------------FINISHED-----------------------------"
 
 dumpbin:
@@ -201,7 +213,7 @@ runall: $(ALL)
 	@rm $(RESULT)
 
 runtest:
-	@make -s run TEST=en
+	make run TEST=en
 
 showtest:
 	@echo $(ALL)
@@ -209,7 +221,7 @@ showtest:
 ########################## run mario #####################################
 
 rungame:
-	@make -s GAME=en run
+	@make GAME=en run
 
 
 ############################ others ######################################
@@ -230,19 +242,33 @@ help:
 	@echo "  Usage: make [target] [arguments]";
 	@echo "  Available targets:";
 	@echo ""
-	@echo "  TEST=en NAME=[testname]      :  compile a cpu test program from C language to a binary executable file"
+	@echo "    TEST=en NAME=[testname] ARCH=[rvxx]      :  compile a cpu test program from C language to a binary executable file,"
+	@echo "                                                RV32IM or RV64IM instruction sets is determined by ARCH "
+	@echo "    runtest NAME=[testname] ARCH=[rvxx]      :  run a cpu test program"
+	@echo "    run TEST=en NAME=[testname] ARCH=[rvxx]  :  run a cpu test program"
+	@echo "    runall ALL=[testname] ARCH=[rvxx]        :  run a cpu test program"
+	@echo "    runall ARCH=[rvxx]                       :  run all the cpu test programs and show whether they are passed"
+	@echo "    run GAME=en ARCH=[rvxx]                  :  run the game mario      "
+	@echo "    rungame ARCH=[rvxx]                      :  run the game mario      "
+	@echo "    clean                                    :  clean the compiled file"
+	@echo "    wave                                     :  watch the CPU wave generated after runing a cpu test program by gtkwave"
+	@echo "    showtest                                 :  show the list of options [testname]"
+	@echo "    readelf NAME=[testname]                  :  read the risc-v assembly instruction of [testname]. "
+	@echo "                                                You must run the test or compile the test before reading its assembly instruction"
 	@echo ""
-	@echo "  runtest NAME=[testname]      :  run a cpu test program"
-	@echo "  run TEST=en NAME=[testname]  :  run a cpu test program"
-	@echo "  runall ALL=[testname]        :  run a cpu test program"
-	@echo "  runall                       :  run all the cpu test programs and show whether they are passed"
+	@echo "  Optional arguments:";
+	@echo "    TEST                                     :  options: en or not specified "
+	@echo "    GAME                                     :  options: en or not specified "
+	@echo "    ARCH                                     :  options: rv32 or rv64, default is rv32 if not specified "
+	@echo "    NAME                                     :  options: any filename in directory /riscv_compile/src/test/ with the suffix removed"
+	@echo "    ALL                                      :  options: any filename in directory /riscv_compile/src/test/ with the suffix removed"
+	@echo "                                                         if not specified, it is the set of all the filename in directory /riscv_compile/src/test/ "
+	@echo "                                                         with the suffix removed "
 	@echo ""
-	@echo "  run GAME=en                  :  run the game mario      "
-	@echo "  rungame                      :  run the game mario      "
-	@echo ""
-	@echo "  clean                        :  clean the compiled file"
-	@echo "  wave                         :  watch the CPU wave generated after runing a cpu test program by gtkwave"
-	@echo "  showtest                     :  show the list of options [testname]"
-	@echo "  readelf NAME=[testname]      :  read the risc-v assembly instruction of [testname]. "
-	@echo "                                  You must run the test or compile the test before reading its assembly instruction"
+	@echo "  Examples:";
+	@echo "    make TEST=en NAME=dummy ARCH=rv64        :  compile dummy.c program to a RV64IM binary executable file "
+	@echo "    make runtest NAME=dummy                  :  run cpu test program dummy on a 32-bit CPU  "
+	@echo "    make runtest NAME=dummy ARCH=rv64        :  run cpu test program dummy on a 64-bit CPU  "
+	@echo "    make readelf NAME=dummy                  :  read the risc-v assembly instruction of the program dummy. "
+
 

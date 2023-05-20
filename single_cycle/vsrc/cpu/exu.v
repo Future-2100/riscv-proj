@@ -162,8 +162,8 @@ module exu (
   wire  [`XLEN-1:0]  arith_in2  =  ( {`XLEN{arith_imm_en}} & data_imm ) |
                               ( {`XLEN{arith_rs2_en}} & data_rs2 ) ;
 
-  wire  [`XLEN-1:0]  srl_rslt = data_rs1 >> arith_in2[5:0] ;
-  wire  [`XLEN-1:0]  sra_mask = (~`XLEN'b0) >> arith_in2[5:0] ;
+  wire  [`XLEN-1:0]  srl_rslt =      data_rs1 >> arith_in2[5:0] ;
+  wire  [`XLEN-1:0]  sra_mask = (~(`XLEN'b0)) >> arith_in2[5:0] ;
   wire  [`XLEN-1:0]  sra_rslt = (srl_rslt & sra_mask) | ( {`XLEN{data_rs1[`XLEN-1]}} & ~sra_mask );
 
   wire  [`XLEN-1:0]  arith_rslt =  ( {`XLEN{add |addi }} & (data_rs1 +   arith_in2) ) |
