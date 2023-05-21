@@ -95,17 +95,12 @@ difftest是CPU验证的常用方法，能够快速定位设计中的错误，dif
 ``riscv_compile``用于将C语言程序编译成risc-v指令集的程序，编译生成的程序文件用于在单周期CPU中运行。
 
 ``riscv_compile/Makefile``中的变量``ARCH``用于设置编译选项,默认情况下``ARCH=rv32``。
-
 若``ARCH = rv32``，则会编译生成一个32位的CPU，并且编译RV32IM指令集的程序。
-
 若``ARCH = rv64``，则会编译生成一个64位的CPU，并且编译RV64IM指令集的程序。
-
 **若切换了ARCH的值，则在运行CPU前必须先执行``make clean``**
 
 ``riscv_compile/src/tests``文件夹下包含了33个测试程序,用于验证单周期CPU的正确性。
-
 运行自己编写测试程序，只需将测试程序文件放入``riscv_compile/src/tests/``目录下即可。
-
 自行编写的测试程序文件可以是以.c结尾的C语言程序文件，也可以是以.S结尾的汇编程序文件。
 
 测试程序允许使用printf函数打印字符串（需包含klib.h头文件），printf函数会访问单周期CPU中的uart外设，因此若使用了printf函数，则必须关闭difftest功能。
