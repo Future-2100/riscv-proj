@@ -23,7 +23,7 @@ ifeq ($(findstring $(MAKECMDGOALS), clean|help|wave|showtest|readelf),)
     ARCH = rv64
   endif
 
-  ifeq ($(ARCH),)
+  ifndef ARCH
     $(info $$ARCH has not specified, use 'ARCH=rv32' by default)
     ARCH = rv32
   endif
@@ -73,15 +73,7 @@ LIBDIR  = $(SRCDIR)/libs
 
 ALL = $(basename $(notdir $(shell find $(TESTDIR) -name "*.c" -o -name "*.S")))
 
-ifeq ($(MAKECMDGOALS),image)
-  NAME = $(TEST)
-  SRCS = $(shell find $(TESTDIR) -name "$(NAME).c" -o -name "$(NAME).S")
-  ifeq ($(SRCS),)
-    $(error Expected $$TEST in {$(ALL)}, Got "$(TEST)")
-  endif
-endif
-
-ifeq ($(MAKECMDGOALS),runtest)
+ifneq ($(findstring $(MAKECMDGOALS), image|runtest),)
   NAME = $(TEST)
   SRCS = $(shell find $(TESTDIR) -name "$(NAME).c" -o -name "$(NAME).S")
   ifeq ($(SRCS),)
@@ -135,11 +127,13 @@ ASFLAGS = -fno-pic -mcmodel=medany -mstrict-align -MMD
 ifeq ($(ARCH),rv32)
   ASFLAGS += -march=rv32im -mabi=ilp32
   LDFLAGS = -melf32lriscv
+	BITS = 32
 endif
 
 ifeq ($(ARCH), rv64)
   ASFLAGS += -march=rv64g
   LDFLAGS = -melf64lriscv
+	BITS = 64
 endif
 
 INCFLAGS += $(addprefix -I, $(INCDIR))
@@ -207,7 +201,7 @@ $(IMAGE).bin: $(IMAGE).elf
 	@$(OBJDUMP) -d $^ > $(IMAGE)_dumpelf.txt
 
 $(RUNFILE):
-	@echo +VERILATOR "->" top
+	@echo +VERILATOR "->" $(BITS)-bit CPU
 	@make -s -C $(CPUDIR) -f $(CPUDIR)/Makefile $(COMPILE_CPU_FLAGS) ARCH=$(ARCH)
 
 image: $(IMAGE).bin
