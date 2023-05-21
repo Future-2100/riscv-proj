@@ -85,7 +85,7 @@ ebreak指令在risc-v指令集中表示进入debug模式，本设计没有debug�
 ## difftest功能介绍
 difftest是CPU验证的常用方法，能够快速定位设计中的错误，difftest的模型文件为``single_cycle/riscv64-nemu-interpreter-so``，该模型为一生一芯中整的nemu模型，但并不完整,仅仅可用于验证RV64G指令集。
 
-若想关闭difftest功能，则在``riscv_compile/Makefile:128``文件中将``COMPILE_CPU_FLAGS += DIFFTEST=en``注释掉。
+若想关闭difftest功能，则在``riscv_compile/Makefile:164``文件中将``COMPILE_CPU_FLAGS += DIFFTEST=en``注释掉。
 
 **注意: 若运行的测试程序需要对串口或定时器进行访问，则必须关掉difftest再编译仿真，否则difftest必然会报错并终止仿真**
 
@@ -100,6 +100,8 @@ difftest是CPU验证的常用方法，能够快速定位设计中的错误，dif
 
 若``ARCH = rv64``，则会编译生成一个64位的CPU，并且编译RV64IM指令集的程序。
 
+**若切换了ARCH的值，则在运行CPU前必须先执行``make clean``**
+
 ``riscv_compile/src/tests``文件夹下包含了33个测试程序,用于验证单周期CPU的正确性。
 
 运行自己编写测试程序，只需将测试程序文件放入``riscv_compile/src/tests/``目录下即可。
@@ -109,6 +111,7 @@ difftest是CPU验证的常用方法，能够快速定位设计中的错误，dif
 测试程序允许使用printf函数打印字符串（需包含klib.h头文件），printf函数会访问单周期CPU中的uart外设，因此若使用了printf函数，则必须关闭difftest功能。
 
 ``riscv_compile/src/game``文件夹下包含了红白游戏机超级玛丽的程序文件，可运行字符串格式的超级玛丽游戏，但由于没有键盘，因此只会输出开头画面。运行超级玛丽时，Makefile脚本会自动关闭difftest功能，并且不会输出波形文件。因此建议个人CPU在通过了33个测试程序之后，再考虑运行超级玛丽游戏。
+**超级玛丽游戏暂时不支持在32位CPU中运行，``make rungame``指令会自动指定ARCH=rv64**
 
 ``riscv_compile/src/klib``文件夹下包含了CPU正常运行程序所需的运行时环境，以及一些常用的库函数。
 

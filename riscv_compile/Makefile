@@ -1,4 +1,4 @@
-.PHONY: clean $(ALL) rom runall run rungame
+.PHONY: clean $(ALL) rom runall run rungame runtest help $(RUNS) wave showtest readelf
 
 COLOR_RED        = \033[1;31m
 COLOR_GREEN      = \033[1;32m
@@ -9,22 +9,42 @@ COLOR_DARK_GREEN = \033[1;36m
 COLOR_WHITE      = \033[1;37m
 COLOR_NONE       = \033[0m
 
-default: $(IMAGE).bin
+############################ pretreatment #############################
+ifeq ($(MAKECMDGOALS),)
+  MAKECMDGOALS  = image
+  .DEFAULT_GOAL = image
+endif
+
+default: image
+
+### ignore to deal with the ARCH if make clean|help|wave|showtest|readelf
+ifeq ($(findstring $(MAKECMDGOALS), clean|help|wave|showtest|readelf),)
+  ifeq ($(MAKECMDGOALS),rungame)
+    ARCH = rv64
+  endif
+
+  ifeq ($(ARCH),)
+    $(info $$ARCH has not specified, use 'ARCH=rv32' by default)
+    ARCH = rv32
+  endif
+  
+  ARCHS = rv32 rv64
+  
+  ifeq ($(filter $(ARCHS), $(ARCH)),)
+    $(error Expected $$ARCH in {$(ARCHS)}, Got "$(ARCH)")
+  endif
+endif
+
 
 ############################## compiler ###############################
-
-ifeq ($(ARCH),)
-	$(info No value specified for $$ARCH, so defaults to "rv32")
-  ARCH = rv32
-endif
 
 ifeq ($(ARCH), rv64)
 CROSS_COMPILE = riscv64-linux-gnu
 endif
 
 ifeq ($(ARCH), rv32)
-CROSS_COMPILE = riscv32-unknown-linux-gnu
-#CROSS_COMPILE = riscv64-linux-gnu
+#CROSS_COMPILE = riscv32-unknown-linux-gnu
+CROSS_COMPILE = riscv64-linux-gnu
 endif
 
 AS = $(CROSS_COMPILE)-gcc
@@ -49,21 +69,35 @@ TESTDIR = $(SRCDIR)/tests
 GAMEDIR = $(SRCDIR)/game
 LIBDIR  = $(SRCDIR)/libs
 
-
 ############################## objects ###############################
-ifeq ($(TEST),en)
+
+ALL = $(basename $(notdir $(shell find $(TESTDIR) -name "*.c" -o -name "*.S")))
+
+ifeq ($(MAKECMDGOALS),image)
+  NAME = $(TEST)
   SRCS = $(shell find $(TESTDIR) -name "$(NAME).c" -o -name "$(NAME).S")
+  ifeq ($(SRCS),)
+    $(error Expected $$TEST in {$(ALL)}, Got "$(TEST)")
+  endif
 endif
 
-ifeq ($(GAME),en)
-  NAME = game
+ifeq ($(MAKECMDGOALS),runtest)
+  NAME = $(TEST)
+  SRCS = $(shell find $(TESTDIR) -name "$(NAME).c" -o -name "$(NAME).S")
+  ifeq ($(SRCS),)
+    $(error Expected $$TEST in {$(ALL)}, Got "$(TEST)")
+  endif
+endif
+
+ifeq ($(MAKECMDGOALS),rungame)
+  NAME     = game
   ROM_PATH = $(GAMEDIR)/nes
   ROMS     = $(shell ls $(ROM_PATH)/rom/*.nes)
   ROM_SRC  = $(addprefix $(ROM_PATH)/gen/, $(addsuffix .c, $(notdir $(basename $(ROMS)))))
   GAME_SRC = $(shell find -L $(GAMEDIR)/src/ -name "*.c" -o -name "*.cpp")
-  GAMEINC = $(sort $(dir $(shell find $(GAMEDIR) -name "*.h")))
-  INCDIR += $(GAMEINC)
-  SRCS = $(ROM_SRC) $(GAME_SRC) 
+  GAMEINC  = $(sort $(dir $(shell find $(GAMEDIR) -name "*.h")))
+  INCDIR  += $(GAMEINC)
+  SRCS     = $(ROM_SRC) $(GAME_SRC) 
   
 rom:
 	@-cd $(ROM_PATH) && python3 build-roms.py
@@ -71,6 +105,10 @@ $(ROM_SRC): rom
 
 endif
 
+
+ifeq ($(NAME),)
+  $(error Compile target has not been specified yet)
+endif
 IMAGE = $(DSTDIR)/$(NAME)
 
 OBJS := $(subst $(WORKDIR)/src/, , $(SRCS))
@@ -95,15 +133,13 @@ RUNFILE = $(CPUDIR)/build/top
 ASFLAGS = -fno-pic -mcmodel=medany -mstrict-align -MMD
 
 ifeq ($(ARCH),rv32)
-ASFLAGS += -march=rv32g -mabi=ilp32
-LDFLAGS = -melf32lriscv
-else
-  ifeq ($(ARCH), rv64)
+  ASFLAGS += -march=rv32im -mabi=ilp32
+  LDFLAGS = -melf32lriscv
+endif
+
+ifeq ($(ARCH), rv64)
   ASFLAGS += -march=rv64g
   LDFLAGS = -melf64lriscv
-  else
-  	$(shell echo "error: ARCH has never defined as rv32 or rv64")
-  endif
 endif
 
 INCFLAGS += $(addprefix -I, $(INCDIR))
@@ -123,13 +159,21 @@ LDFLAGS += -T $(WORKDIR)/script/linker.ld
 LDFLAGS += --gc-sections 
 LDFLAGS += -e _start
 
-ifeq ($(TEST), en)
+ifeq ($(MAKECMDGOALS), runtest)
   COMPILE_CPU_FLAGS += WAVE=en
   COMPILE_CPU_FLAGS += DIFFTEST=en
 endif
 
-ifeq ($(GAME), en)
+ifeq ($(MAKECMDGOALS), rungame)
   CFLAGS += -DPSS_STYLE=1 -DPRAMESKIP -D__NO_FILE_SYSTEM__
+  ifeq ($(ARCH), rv32)
+    CFLAGS += -D__ISA__=\"riscv32\"
+    CFLAGS += -D__ISA_RISCV32__
+  endif
+  ifeq ($(ARCH), rv64)
+    CFLAGS += -D__ISA__=\"riscv64\"
+    CFLAGS += -D__ISA_RISCV64__
+  endif
 endif
 
 
@@ -164,19 +208,23 @@ $(IMAGE).bin: $(IMAGE).elf
 
 $(RUNFILE):
 	@echo +VERILATOR "->" top
-	make -C $(CPUDIR) -f $(CPUDIR)/Makefile $(COMPILE_CPU_FLAGS) ARCH=$(ARCH)
+	@make -s -C $(CPUDIR) -f $(CPUDIR)/Makefile $(COMPILE_CPU_FLAGS) ARCH=$(ARCH)
+
+image: $(IMAGE).bin
 
 
 ifeq ($(ARCH),rv32)
   DIFFFILE = difftest/riscv32-nemu-interpreter-so
-else
-  ifeq ($(ARCH),rv64)
+endif
+
+ifeq ($(ARCH),rv64)
     DIFFFILE = difftest/riscv64-nemu-interpreter-so
-  endif
 endif
 
 
-run: $(IMAGE).bin $(RUNFILE)
+RUNS = run runtest rungame
+
+$(RUNS): %: $(IMAGE).bin $(RUNFILE)
 	@echo "----------------------RUNNING------------------------------"
 	$(RUNFILE) --diff=$(CPUDIR)/$(DIFFFILE) --bin=$< "+img_txt=$(IMAGE).txt"
 	@echo "----------------------FINISHED-----------------------------"
@@ -190,10 +238,8 @@ dumpelf:
 
 ############################ run test ###################################
 
-ALL = $(basename $(notdir $(shell find $(TESTDIR) -name "*.c" -o -name "*.S")))
-
 $(ALL): %:
-	@if make -s NAME=$* TEST=en run; then \
+	@if make -s TEST=$* runtest; then \
 		printf "[%14s] $(COLOR_GREEN) PASS!$(COLOR_NONE) \n" $* >> $(RESULT) ; \
 	else \
 		printf "[%14s] $(COLOR_RED) FAIL!$(COLOR_NONE) \n" $* >> $(RESULT) ; \
@@ -206,16 +252,11 @@ runall: $(ALL)
 	@cat $(RESULT)
 	@rm $(RESULT)
 
-runtest:
-	make run TEST=en
-
 showtest:
 	@echo $(ALL)
 
 ########################## run mario #####################################
 
-rungame:
-	@make GAME=en run
 
 
 ############################ others ######################################
@@ -224,7 +265,7 @@ wave:
 	gtkwave wave.vcd -a cpu.gtkw
 
 readelf:
-	vim $(IMAGE)_dumpelf.txt
+	vim $(DSTDIR)/$(TEST)_dumpelf.txt
 
 clean:
 	rm -rf build Makefile.* .result
@@ -232,37 +273,33 @@ clean:
 
 
 help:
-	@echo "  ####################### Help Info ##############################"
+	@echo "  ####################################################### Help Info ######################################################################"
 	@echo "  Usage: make [target] [arguments]";
 	@echo "  Available targets:";
-	@echo ""
-	@echo "    TEST=en NAME=[testname] ARCH=[rvxx]      :  Compile a cpu test program from C language to a binary executable file,"
-	@echo "                                                RV32IM or RV64IM instruction sets is determined by ARCH. "
-	@echo "    runtest NAME=[testname] ARCH=[rvxx]      :  Run a cpu test program."
-	@echo "    run TEST=en NAME=[testname] ARCH=[rvxx]  :  Run a cpu test program."
+	@echo "    TEST=[testname] ARCH=[rvxx]              :  Compile a cpu test program from C language to a binary executable file,"
+	@echo "                                                RV32IM or RV64IM instruction sets determined by ARCH. "
+	@echo "    runtest TEST=[testname] ARCH=[rvxx]      :  Run a cpu test program."
 	@echo "    runall ALL=[testname] ARCH=[rvxx]        :  Run a cpu test program."
 	@echo "    runall ARCH=[rvxx]                       :  Run all the cpu test programs and show whether they are passed."
-	@echo "    run GAME=en ARCH=[rvxx]                  :  Run the game mario."
-	@echo "    rungame ARCH=[rvxx]                      :  Run the game mario."
+	@echo "    rungame                                  :  Run the game mario. Mario run in 64-bit CPU only"
 	@echo "    clean                                    :  Clean the compiled file."
 	@echo "    wave                                     :  Watch the CPU wave generated after runing a cpu test program by gtkwave."
 	@echo "    showtest                                 :  Show the list of options [testname]."
-	@echo "    readelf NAME=[testname]                  :  Read the risc-v assembly instruction of [testname]. "
+	@echo "    readelf TEST=[testname]                  :  Read the risc-v assembly instruction of [testname]. "
 	@echo "                                                You must run the test or compile the test before reading its assembly instruction."
 	@echo ""
 	@echo "  Optional arguments:";
-	@echo "    TEST=                                    :  options: en / (NULL) "
-	@echo "    GAME=                                    :  options: en / (NULL) "
 	@echo "    ARCH=                                    :  options: rv32 / rv64, default is rv32 if not specified "
-	@echo "    NAME=                                    :  options: the list print by 'make showtest'."
+	@echo "    TEST=                                    :  options: the list print by 'make showtest'."
 	@echo "    ALL=                                     :  options: the list print by 'make showtest',"
 	@echo "                                                         if not specified, it is the set of all the filename in directory /riscv_compile/src/test/ "
 	@echo "                                                         with the suffix removed. "
 	@echo ""
 	@echo "  Examples:";
-	@echo "    make TEST=en NAME=dummy ARCH=rv64        :  Compile dummy.c program to a RV64IM binary executable file. "
-	@echo "    make runtest NAME=dummy                  :  Run cpu test program dummy on a 32-bit CPU."
-	@echo "    make runtest NAME=dummy ARCH=rv64        :  Run cpu test program dummy on a 64-bit CPU."
-	@echo "    make readelf NAME=dummy                  :  Read the risc-v assembly instruction of the program dummy. "
+	@echo "    make TEST=dummy ARCH=rv64                :  Compile dummy program to a RV64IM binary executable file. "
+	@echo "    make runtest TEST=dummy                  :  Run test dummy on a 32-bit CPU."
+	@echo "    make runtest TEST=dummy ARCH=rv64        :  Run test dummy on a 64-bit CPU."
+	@echo "    make readelf TEST=dummy                  :  Read the risc-v assembly instruction of the program dummy. "
+	@echo "    make rungame                             :  Run the game mario in 64-bit CPU."
 
 
