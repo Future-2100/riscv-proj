@@ -58,6 +58,25 @@ cpu cpu_inst (
 );
 
 
+  wire                 mmy_cen     ;
+  wire                 mmy_wr      ;
+  wire  [`XLEN/8-1:0]  mmy_strb    ;
+  wire  [26:0]         mmy_addr    ;
+  wire  [`XLEN-1:0]    mmy_wdata   ;
+  wire  [`XLEN-1:0]    mmy_rdata   ;
+  wire                 mmy_error   ;
+
+  wire                 uart_cen    ;
+  wire                 uart_wr     ;
+  wire  [7:0]          uart_wdata  ;
+  wire                 uart_error  ;
+
+  wire                 timer_cen   ;
+  wire                 timer_wr    ;
+  wire  [`XLEN-1:0]    timer_rdata ;
+  wire                 timer_error ;
+
+
 bus bus_inst (
   .acs_en      ( acs_en      )  ,
   .acs_wr      ( acs_wr      )  ,
@@ -87,23 +106,6 @@ bus bus_inst (
 );
 
 
-  wire                 mmy_cen     ;
-  wire                 mmy_wr      ;
-  wire  [`XLEN/8-1:0]  mmy_strb    ;
-  wire  [26:0]         mmy_addr    ;
-  wire  [`XLEN-1:0]    mmy_wdata   ;
-  wire  [`XLEN-1:0]    mmy_rdata   ;
-  wire                 mmy_error   ;
-
-  wire          uart_cen    ;
-  wire          uart_wr     ;
-  wire  [7:0]   uart_wdata  ;
-  wire          uart_error  ;
-
-  wire               timer_cen   ;
-  wire               timer_wr    ;
-  wire  [`XLEN-1:0]  timer_rdata ;
-  wire               timer_error ;
 
   //wire  mmy_icen = (pc[`XLEN-1:32]==32'b0) && (pc[31:27]==5'b1000_0) ;
   
@@ -182,10 +184,11 @@ timer timer_inst(
                          , cpu_inst.decoder_inst.opcode_4_2__110
                          , cpu_inst.decoder_inst.opcode_6_5__10  
                          , cpu_inst.regfile_inst.gpr_wen
-                         , cpu_inst.exu_inst.productu
-                         , cpu_inst.exu_inst.productsu
+                         , cpu_inst.exu_inst.rs2_00000
+                         , cpu_inst.exu_inst.alu_inst.sum
+                         , cpu_inst.exu_inst.alu_inst.discuss
+                         , cpu_inst.exu_inst.alu_inst.remainder
                        `ifdef __RV64__
-                         , cpu_inst.exu_inst.productw
                        `endif
                        };
 

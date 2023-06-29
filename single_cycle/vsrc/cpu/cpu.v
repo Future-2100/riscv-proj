@@ -1,8 +1,8 @@
 `include "default.v"
 
 module cpu(
-  input  wire          clk         ,
-  input  wire          rstn        ,
+  input  wire               clk         ,
+  input  wire               rstn        ,
 
   output wire  [`XLEN-1:0]  pc          ,
   input  wire  [31:0]       instr       ,
@@ -14,244 +14,152 @@ module cpu(
   output wire  [`XLEN-1:0]  acs_wdata   ,
   input  wire  [`XLEN-1:0]  acs_rdata   ,
   output wire               ebreak      
-
 );
 
 wire [`XLEN-1:0]  jump_pc ;
 wire              jump_en ;
+wire [`XLEN-1:0]  snxt_pc ;
 
 pc_gen pc_gen_inst(
   .clk     ( clk     )  ,
   .rstn    ( rstn    )  ,
   .jump_pc ( jump_pc )  ,
   .jump_en ( jump_en )  ,
+  .snxt_pc ( snxt_pc )  ,
   .pc      ( pc      )  
 );
 
-  wire    [`XLEN-1:0]    imm     ;
-  wire              lui     ;
-  wire              auipc   ;
-  wire              jal     ;
-  wire              jalr    ;
-  wire              beq     ;
-  wire              bne     ;
-  wire              blt     ;
-  wire              bge     ;
-  wire              bltu    ;
-  wire              bgeu    ;
-  wire              lb      ;
-  wire              lh      ;
-  wire              lw      ;
-  wire              lbu     ;
-  wire              lhu     ;
-  wire              sb      ;
-  wire              sh      ;
-  wire              sw      ;
-  wire              addi    ;
-  wire              slti    ;
-  wire              sltiu   ;
-  wire              xori    ;
-  wire              ori     ;
-  wire              andi    ;
-  wire              slli    ;
-  wire              srli    ;
-  wire              srai    ;
-  wire              add     ;
-  wire              sub     ;
-  wire              sll     ;
-  wire              slt     ;
-  wire              sltu    ;
-  wire              xor_    ;
-  wire              srl     ;
-  wire              sra     ;
-  wire              or_     ;
-  wire              and_    ;
-  wire              mul     ;
-  wire              mulh    ;
-  wire              mulhsu  ;
-  wire              mulhu   ;
-  wire              div     ;
-  wire              divu    ;
-  wire              rem     ;
-  wire              remu    ;
+
+  wire    [`XLEN-1:0]    data_imm       ;
+
+  wire                   lui            ;
+  wire                   auipc          ;
+  wire                   jal            ;
+  wire                   jalr           ;
+  wire                   branch         ;
+  wire                   load           ;
+  wire                   store          ;
+  wire                   arith          ;
+  wire                   arithi         ;
+  wire                   system         ;
+
+  wire                   funct7_0000000 ; 
+  wire                   funct7_0100000 ; 
+  wire                   funct7_0000001 ; 
+
+  wire                   funct3_000     ;
+  wire                   funct3_001     ;
+  wire                   funct3_010     ;
+  wire                   funct3_011     ;
+  wire                   funct3_100     ;
+  wire                   funct3_101     ;
+  wire                   funct3_110     ;
+  wire                   funct3_111     ;
+
+  wire                   rs2_00000      ;
+  wire                   rs2_00001      ;
+  wire                   rs1_00000      ;
+  wire                   rd__00000      ;
+
 `ifdef __RV64__
-  wire              sd      ;
-  wire              lwu     ;
-  wire              ld      ;
-  wire              addiw   ;
-  wire              slliw   ;
-  wire              srliw   ;
-  wire              sraiw   ;
-  wire              addw    ;
-  wire              subw    ;
-  wire              sllw    ;
-  wire              srlw    ;
-  wire              sraw    ;
-  wire              mulw    ;
-  wire              divw    ;
-  wire              divuw   ;
-  wire              remw    ;
-  wire              remuw   ;
+  wire                   arithw         ;
+  wire                   arithiw        ;
+  wire                   funct7_000000x ; 
+  wire                   funct7_010000x ; 
 `endif
 
 decoder decoder_inst(
-  .instr  ( instr  ) ,
-  .imm    ( imm    ) ,
-  .lui    ( lui    ) ,
-  .auipc  ( auipc  ) ,
-  .jal    ( jal    ) ,
-  .jalr   ( jalr   ) ,
-  .beq    ( beq    ) ,
-  .bne    ( bne    ) ,
-  .blt    ( blt    ) ,
-  .bge    ( bge    ) ,
-  .bltu   ( bltu   ) ,
-  .bgeu   ( bgeu   ) ,
-  .lb     ( lb     ) ,
-  .lh     ( lh     ) ,
-  .lw     ( lw     ) ,
-  .lbu    ( lbu    ) ,
-  .lhu    ( lhu    ) ,
-  .sb     ( sb     ) ,
-  .sh     ( sh     ) ,
-  .sw     ( sw     ) ,
-  .addi   ( addi   ) ,
-  .slti   ( slti   ) ,
-  .sltiu  ( sltiu  ) ,
-  .xori   ( xori   ) ,
-  .ori    ( ori    ) ,
-  .andi   ( andi   ) ,
-  .slli   ( slli   ) ,
-  .srli   ( srli   ) ,
-  .srai   ( srai   ) ,
-  .add    ( add    ) ,
-  .sub    ( sub    ) ,
-  .sll    ( sll    ) ,
-  .slt    ( slt    ) ,
-  .sltu   ( sltu   ) ,
-  .xor_   ( xor_   ) ,
-  .srl    ( srl    ) ,
-  .sra    ( sra    ) ,
-  .or_    ( or_    ) ,
-  .and_   ( and_   ) ,
-  .mul    ( mul    ) ,
-  .mulh   ( mulh   ) ,
-  .mulhsu ( mulhsu ) ,
-  .mulhu  ( mulhu  ) ,
-  .div    ( div    ) ,
-  .divu   ( divu   ) ,
-  .rem    ( rem    ) ,
-  .remu   ( remu   ) ,
+   .instr           ( instr          )  
+ , .data_imm        ( data_imm       )  
+ , .lui             ( lui            )  
+ , .auipc           ( auipc          )  
+ , .jal             ( jal            )  
+ , .jalr            ( jalr           )  
+ , .branch          ( branch         )  
+ , .load            ( load           )  
+ , .store           ( store          )  
+ , .arith           ( arith          )  
+ , .arithi          ( arithi         )  
+ , .system          ( system         )  
+ , .funct7_0000000  ( funct7_0000000 )   
+ , .funct7_0100000  ( funct7_0100000 )   
+ , .funct7_0000001  ( funct7_0000001 )   
+ , .funct3_000      ( funct3_000     )  
+ , .funct3_001      ( funct3_001     )  
+ , .funct3_010      ( funct3_010     )  
+ , .funct3_011      ( funct3_011     )  
+ , .funct3_100      ( funct3_100     )  
+ , .funct3_101      ( funct3_101     )  
+ , .funct3_110      ( funct3_110     )  
+ , .funct3_111      ( funct3_111     )  
+ , .rs2_00000       ( rs2_00000      )  
+ , .rs2_00001       ( rs2_00001      )  
+ , .rs1_00000       ( rs1_00000      )  
+ , .rd__00000       ( rd__00000      )  
 `ifdef __RV64__
-  .sd     ( sd     ) ,
-  .lwu    ( lwu    ) ,
-  .ld     ( ld     ) ,
-  .addiw  ( addiw  ) ,
-  .slliw  ( slliw  ) ,
-  .srliw  ( srliw  ) ,
-  .sraiw  ( sraiw  ) ,
-  .addw   ( addw   ) ,
-  .subw   ( subw   ) ,
-  .sllw   ( sllw   ) ,
-  .srlw   ( srlw   ) ,
-  .sraw   ( sraw   ) ,
-  .mulw   ( mulw   ) ,
-  .divw   ( divw   ) ,
-  .divuw  ( divuw  ) ,
-  .remw   ( remw   ) ,
-  .remuw  ( remuw  ) ,
+ , .arithw          ( arithw         )  
+ , .arithiw         ( arithiw        )  
+ , .funct7_000000x  ( funct7_000000x )   
+ , .funct7_010000x  ( funct7_010000x )  
 `endif
-  .ebreak ( ebreak )  
 );
 
+  wire  [`XLEN-1:0]  data_rs1       ;
+  wire  [`XLEN-1:0]  data_rs2       ;
 
-wire  [`XLEN-1:0]  data_imm = imm ;
-wire  [`XLEN-1:0]  data_rs1  ;
-wire  [`XLEN-1:0]  data_rs2  ;
-
-wire  wb_en ;
-wire  [`XLEN-1:0]  wb_data ;
+  wire                 wb_en       ;
+  wire  [`XLEN-1:0]    wb_data     ;
 
 exu exu_inst(
-  .pc        ( pc        )  ,
-  .data_rs1  ( data_rs1  )  ,
-  .data_rs2  ( data_rs2  )  ,
-  .data_imm  ( data_imm  )  ,
-  .lui       ( lui       )  ,
-  .auipc     ( auipc     )  ,
-  .addi      ( addi      )  ,
-  .slti      ( slti      )  ,
-  .sltiu     ( sltiu     )  ,
-  .xori      ( xori      )  ,
-  .ori       ( ori       )  ,
-  .andi      ( andi      )  ,
-  .slli      ( slli      )  ,
-  .srli      ( srli      )  ,
-  .srai      ( srai      )  ,
-  .add       ( add       )  ,
-  .sub       ( sub       )  ,
-  .sll       ( sll       )  ,
-  .slt       ( slt       )  ,
-  .sltu      ( sltu      )  ,
-  .xor_      ( xor_      )  ,
-  .srl       ( srl       )  ,
-  .sra       ( sra       )  ,
-  .or_       ( or_       )  ,
-  .and_      ( and_      )  ,
-  .mul       ( mul       )  ,
-  .mulh      ( mulh      )  ,
-  .mulhsu    ( mulhsu    )  ,
-  .mulhu     ( mulhu     )  ,
-  .div       ( div       )  ,
-  .divu      ( divu      )  ,
-  .rem       ( rem       )  ,
-  .remu      ( remu      )  ,
-  .beq       ( beq       )  ,
-  .bne       ( bne       )  ,
-  .blt       ( blt       )  ,
-  .bge       ( bge       )  ,
-  .bltu      ( bltu      )  ,
-  .bgeu      ( bgeu      )  ,
-  .jal       ( jal       )  ,
-  .jalr      ( jalr      )  ,
-  .lb        ( lb        )  ,
-  .lh        ( lh        )  ,
-  .lw        ( lw        )  ,
-  .lbu       ( lbu       )  ,
-  .lhu       ( lhu       )  ,
-  .sb        ( sb        )  ,
-  .sh        ( sh        )  ,
-  .sw        ( sw        )  ,
+    .data_pc        (      pc         )   
+  , .data_rs1       ( data_rs1        )   
+  , .data_rs2       ( data_rs2        )   
+  , .data_imm       ( data_imm        )   
+  , .snxt_pc        ( snxt_pc         )   
+  , .lui            ( lui             )   
+  , .auipc          ( auipc           )   
+  , .jal            ( jal             )   
+  , .jalr           ( jalr            )   
+  , .branch         ( branch          )   
+  , .load           ( load            )   
+  , .store          ( store           )   
+  , .arith          ( arith           )   
+  , .arithi         ( arithi          )   
+  , .system         ( system          )   
+  , .funct7_0000000 ( funct7_0000000  )    
+  , .funct7_0100000 ( funct7_0100000  )    
+  , .funct7_0000001 ( funct7_0000001  )    
+  , .funct3_000     ( funct3_000      )   
+  , .funct3_001     ( funct3_001      )   
+  , .funct3_010     ( funct3_010      )   
+  , .funct3_011     ( funct3_011      )   
+  , .funct3_100     ( funct3_100      )   
+  , .funct3_101     ( funct3_101      )   
+  , .funct3_110     ( funct3_110      )   
+  , .funct3_111     ( funct3_111      )   
+  , .rs2_00000      ( rs2_00000       )   
+  , .rs2_00001      ( rs2_00001       )   
+  , .rs1_00000      ( rs1_00000       )   
+  , .rd__00000      ( rd__00000       )   
 `ifdef __RV64__
-  .mulw      ( mulw      )  ,
-  .divw      ( divw      )  ,
-  .divuw     ( divuw     )  ,
-  .remw      ( remw      )  ,
-  .remuw     ( remuw     )  ,
-  .addiw     ( addiw     )  ,
-  .slliw     ( slliw     )  ,
-  .srliw     ( srliw     )  ,
-  .sraiw     ( sraiw     )  ,
-  .addw      ( addw      )  ,
-  .subw      ( subw      )  ,
-  .sllw      ( sllw      )  ,
-  .srlw      ( srlw      )  ,
-  .sraw      ( sraw      )  ,
-  .lwu       ( lwu       )  ,
-  .ld        ( ld        )  ,
-  .sd        ( sd        )  ,
+  , .arithw         ( arithw          )
+  , .arithiw        ( arithiw         )
+  , .funct7_000000x ( funct7_000000x  ) 
+  , .funct7_010000x ( funct7_010000x  ) 
 `endif
-  .wb_en     ( wb_en     )  ,
-  .wb_data   ( wb_data   )  ,
-  .jump_en   ( jump_en   )  ,
-  .jump_pc   ( jump_pc   )  ,  
-  .acs_en    ( acs_en    )  ,
-  .acs_wr    ( acs_wr    )  ,
-  .acs_bytes ( acs_bytes )  ,
-  .acs_addr  ( acs_addr  )  ,  
-  .acs_wdata ( acs_wdata )  ,
-  .acs_rdata ( acs_rdata )    
+  , .wb_en          ( wb_en           )   
+  , .wb_data        ( wb_data         )   
+  , .jump_en        ( jump_en         )   
+  , .jump_pc        ( jump_pc         )     
+  , .acs_en         ( acs_en          )   
+  , .acs_wr         ( acs_wr          )   
+  , .acs_bytes      ( acs_bytes       )   
+  , .acs_addr       ( acs_addr        )     // address of memory access
+  , .acs_wdata      ( acs_wdata       )   
+  , .acs_rdata      ( acs_rdata       )   
+  , .ebreak         ( ebreak          )   
 );
+
 
 wire  [4:0]  index_rd   =  instr[11:7] ;
 wire  [4:0]  index_rs1  =  instr[19:15];

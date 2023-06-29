@@ -98,9 +98,10 @@ $(ROM_SRC): rom
 endif
 
 
-ifeq ($(NAME),)
-  $(error Compile target has not been specified yet)
-endif
+#ifeq ($(NAME),)
+#  $(error Compile target has not been specified yet)
+#endif
+
 IMAGE = $(DSTDIR)/$(NAME)
 
 OBJS := $(subst $(WORKDIR)/src/, , $(SRCS))

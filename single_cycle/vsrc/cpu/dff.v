@@ -2,7 +2,8 @@
 
 module dff
 #(
-  parameter DW = 1
+  parameter DW = 1,
+  parameter RST_VALUE = {DW{1'b0}}
 ) (
   input   wire              clk     ,
   input   wire              rstn    ,
@@ -14,7 +15,7 @@ module dff
 reg  [DW-1:0]  q_reg ;
 always@(posedge clk) begin
   if(!rstn)
-    q_reg <= {DW{1'b0}};
+    q_reg <= RST_VALUE;
   else if (en)
     q_reg <= d ;
 end
